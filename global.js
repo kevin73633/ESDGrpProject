@@ -2,19 +2,18 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
 import  { getDatabase, ref, get, push, set, update, remove, child, onValue, onChildAdded, onChildChanged, onChildRemoved}  from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
 import  { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut}  from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
-import  { getFirestore, doc,deleteDoc, getDoc, collection, query, where, getDocs, setDoc, updateDoc }  from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDbJrpGdM6mUDPD-iGTQK97Nz_iMtnQNGQ",
-  authDomain: "wad2-20e6f.firebaseapp.com",
-  projectId: "wad2-20e6f",
-  storageBucket: "wad2-20e6f.appspot.com",
-  messagingSenderId: "1075148882917",
-  appId: "1:1075148882917:web:7279d743c8f7f78664250c",
-  measurementId: "G-ELR7RHQCYY"
+  apiKey: "AIzaSyCCo6vTfAeWwN4-dVCwcVozAkDSOlNEF_k",
+  authDomain: "wad2-b1ba1.firebaseapp.com",
+  databaseURL: "https://wad2-b1ba1-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "wad2-b1ba1",
+  storageBucket: "wad2-b1ba1.appspot.com",
+  messagingSenderId: "146287601431",
+  appId: "1:146287601431:web:845da202141a53e241f952"
 };
 
 // Initialize Firebase
@@ -23,46 +22,11 @@ const auth = getAuth();
 // Initialize Realtime Database and get a reference to the service
 
 //REALTIME DATABASE
-const db = getFirestore();
-const coursesRef = null;//ref(db, 'courses/');
+const db = getDatabase();
+const coursesRef = ref(db, 'courses/');
 
 var currUser = null;
 var allCourses = [];
-async function pushData1()
-{
-  const q = query(collection(db, "users"));
-  //pushData2();
-  const querySnapshot = await getDocs(q);
-  querySnapshot.forEach((doc) => {
-    // doc.data() is never undefined for query doc snapshots
-    console.log(doc.id, " => ", doc.data());
-    //pushData3(doc.id);
-    pushData2(doc.id);
-  });
-  // Add a new document in collection "cities"
-
-}
-async function pushData2(id)
-{
-  // await setDoc(doc(db, "users", "hehehe"), {
-  // });
-  const washingtonRef = doc(db, "users", `${id}`);
-  await updateDoc(washingtonRef, {
-    email: "",
-    friends: [],
-    likedMovies: [],
-    photoURL: "",
-    swipedMovies: [],
-    username: "testAccount123testAccount456testAccount789testAccount123123123",
-    hasSeenFeatureReminder:false,
-    isNewUser:false,
-
-  });
-}
-async function pushData3(id)
-{
-  await deleteDoc(doc(db, "users", `${id}`));
-}
 function CreateNewUser(user) {
     var initialGPA = 0.0;
     set(ref(db, 'users/' + user.uid), {
@@ -362,5 +326,5 @@ export
     CreateNewUser,
     SetCurrentUser,
     logout,
-    pushData1
+
 }

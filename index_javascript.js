@@ -58,7 +58,6 @@ document.getElementById('GoogleLoginBtn').addEventListener('click',function(){
 
 document.addEventListener('DOMContentLoaded', function() {
   //ShowNumberOfUsers();
-  global.pushData1();
   onAuthStateChanged(global.auth, (user) => {
     if (user) {
       // User is signed in, see docs for a list of available properties
