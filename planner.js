@@ -30,12 +30,12 @@ function ShowPlanner1() {
                 yearHasCourses = true;
                 content += `
                     <div class="card-body mb-2">
-                        <h5 class="card-title semester">Semester ${semCodes[index2]}</h5>`;
-                
-                for (let index3 = 0; index3 < CoursesInYearAndSem.length; index3++) {
-                    const element = CoursesInYearAndSem[index3];
-                    content += `<div class="card innerPlanner"><a href="#" data-bs-toggle="modal" data-bs-target="#tasksModal" class="innerPlannerHref fill-div">${global.Course.GetByCourseCode(element.courseCode).courseName}</a></div>`;
-                }
+                        <h5 id="${"Y" + (index + 1) + "S" + semCodes[index2]}" class="card-title semester">Semester ${semCodes[index2]}</h5>`;
+                // for (let index3 = 0; index3 < CoursesInYearAndSem.length; index3++) {
+                //     const element = CoursesInYearAndSem[index3];
+                //     var code = element.courseCode;
+                //     content += `<div class="card innerPlanner"><a href="#" data-bs-toggle="modal" data-bs-target="#tasksModal" class="innerPlannerHref fill-div">${global.Course.GetByCourseCode(element.courseCode).courseName}</a></div>`;
+                // }
                 content += `</div>`;
             }
         }
@@ -44,9 +44,74 @@ function ShowPlanner1() {
         }
         content += `</div></div>`;
         coursePlanner.innerHTML += content;
+        
+    }
+    for (let index = 0; index < 4; index++) {
+        var yearHasCourses = false;
+        for (let index2 = 0; index2 < 4; index2++) {
+            var CoursesInYearAndSem = global.Course.GetAllCoursesInYearAndSem("Y" + (index + 1) + "S" + semCodes[index2]);
+            if (CoursesInYearAndSem.length > 0) {
+                yearHasCourses = true;
+                for (let index3 = 0; index3 < CoursesInYearAndSem.length; index3++) {
+                    const element = CoursesInYearAndSem[index3];
+                    var code = element.courseCode;
+                    var innerPlanner = document.createElement("div");
+                    innerPlanner.className = 'card innerPlanner';
+                    var a = document.createElement("a");
+                    a.href = "#";
+                    a.className = "innerPlannerHref fill-div";
+                    a.setAttribute("data-bs-toggle", "modal");
+                    a.setAttribute("data-bs-target", "#tasksModal");
+                    a.onclick = function() {SetCurrentCourse(code)};
+                    a.innerText = global.Course.GetByCourseCode(element.courseCode).courseName;
+                    innerPlanner.appendChild(a);
+                    document.getElementById("Y" + (index + 1) + "S" + semCodes[index2]).appendChild(innerPlanner);
+                    //content += `<div class="card innerPlanner"><a href="#" data-bs-toggle="modal" data-bs-target="#tasksModal" class="innerPlannerHref fill-div">${global.Course.GetByCourseCode(element.courseCode).courseName}</a></div>`;
+                }
+            }
+        }
+        if (!yearHasCourses) {
+        }
+        
+    }
+
+}
+function createForm(modalBody) {
+    // <label for="course" class="form-label">${course}</label>
+    /* Creates form in modal */
+    modalBody.innerHTML = ""
+    for (let index = 0; index < 5; index++) {
+        var form = `<form id="selectSemester">
+                <div class="row mb-3 justify-content-center">
+                    <div class="col-5">
+                         <label for="course" class="form-label">bruh</label>
+                    </div>
+                    <div class="col-5">
+                        <select id = "_dropdown" class="form-select" aria-label="semester">
+                            <option value="A+">A+</option>
+                            <option value="A">A</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B">B</option>
+                            <option value="B-">B-</option>
+                            <option value="C+">C+</option>
+                            <option value="C">C</option>
+                            <option value="C-">C-</option>
+                            <option value="D+">D+</option>
+                            <option value="D">D</option>
+                            <option value="F">F</option>
+                        </select>
+                    <div>
+                </div>
+            </form>`
+            modalBody.innerHTML += form;
     }
 }
-
+function SetCurrentCourse(coursecode)
+{
+    global.SetCurrentCourse(coursecode);
+    createForm(document.getElementById("tasksModalBody"));
+}
 function ShowPlanner2()
 {
     document.getElementById("plannerTable").style.display = "block";
@@ -96,6 +161,7 @@ function ShowPlanner2()
         //td.style.backgroundColor = "red";
     }
 }
+
 function togglePlannerMode()
 {
     var val = document.getElementById("viewToggle").checked;
@@ -122,7 +188,29 @@ document.addEventListener('DOMContentLoaded', function() {
     global.currUser.SortCourses();
     document.getElementById("viewToggle").onclick = function(){togglePlannerMode();};
     ShowPlanner1();
+    // for (let index = 0; index < global.allCourses.length; index++) {
+    //     const element = global.allCourses[index];
+    //     var taskList = {};
+    //     var A1 = new global.Task("A1", 0.1);
+    //     var A2 = new global.Task("A2", 0.15);
+    //     var A3 = new global.Task("A3", 0.2);
+    //     var Q1 = new global.Task("Q1", 0.1);
+    //     var Q2 = new global.Task("Q2", 0.15);
+    //     var Q3 = new global.Task("Q3", 0.2);
+    //     var CP = new global.Task("CP", 0.1);
+    //     taskList["A1"] = A1;
+    //     taskList["A2"] = A2;
+    //     taskList["A3"] = A3;
+    //     taskList["Q1"] = Q1;
+    //     taskList["Q2"] = Q2;
+    //     taskList["Q3"] = Q3;
+    //     taskList["CP"] = CP;
+    //     global.CreateNewTaskList(element.courseCode, taskList);
+        
+    // }
+    
     //ShowPlanner2();
+
 })
 
 // Function to handle form submission and validation
@@ -183,3 +271,4 @@ gpaInput.addEventListener("keypress", function(event)
         saveDetails();
     }
 });
+

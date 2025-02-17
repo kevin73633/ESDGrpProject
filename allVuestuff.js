@@ -93,14 +93,14 @@ app.component('tasks-menu', {
                     <h1 class="modal-title fs-5" id="tasksModalLabel">Fill in your grades for this module</h1>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body text-center " id="tasksModalBody"></div>
+                <div class="modal-body text-center" id="tasksModalBody"></div>
                 <div class="modal-footer justify-content-center">
                     <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="buttonToAdd">Confirm Grades</button>
                 </div>
             </div>
         </div>
     </div>
-    `
+    `,
 })
 app.component('profile-top', {
     template: `

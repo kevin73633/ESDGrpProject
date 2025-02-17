@@ -27,6 +27,7 @@ const coursesRef = ref(db, 'courses/');
 
 var currUser = null;
 var allCourses = [];
+var currCourse = null;
 function CreateNewUser(user) {
     var initialGPA = 0.0;
     set(ref(db, 'users/' + user.uid), {
@@ -54,6 +55,10 @@ function logout () {
 function SetCurrentUser(user)
 {
     currUser = new User(user.uid, user.username, user.gpa, user.courses, user.degree, user.currentYearAndSem);
+}
+function SetCurrentCourse(coursecode)
+{
+    currCourse = coursecode;
 }
 function SetAllCourses(courses)
 {
@@ -84,7 +89,19 @@ function CreateNewCourse(course) {
     recommendedYearAndSem: course.recommendedYearAndSem,
   });
 }
-
+function CreateNewTaskList(courseCode, TaskList) {
+  set(ref(db, 'tasks/' + courseCode), {
+    taskList: TaskList,
+  });
+}
+class Task
+{
+  constructor(taskName, taskWeightage)
+  {
+    this.taskName = taskName;
+    this.taskWeightage = taskWeightage;
+  }
+}
 class Course
 {
   constructor(courseCode, courseName, courseCategory, recommendedYearAndSem = "Y1S1", courseDescription = "") {
@@ -321,10 +338,14 @@ export
     coursesRef,
     CreateNewCourse,
     currUser,
+    currCourse,
+    SetCurrentCourse,
     allCourses,
     SetAllCourses,
     CreateNewUser,
     SetCurrentUser,
+    CreateNewTaskList,
+    Task,
     logout,
 
 }
