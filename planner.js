@@ -26,7 +26,6 @@ function ShowPlanner1() {
         var yearHasCourses = false;
         for (let index2 = 0; index2 < 4; index2++) {
             var CoursesInYearAndSem = global.Course.GetAllCoursesInYearAndSem("Y" + (index + 1) + "S" + semCodes[index2]);
-            console.log(CoursesInYearAndSem)
             if (CoursesInYearAndSem.length > 0) {
                 yearHasCourses = true;
                 content += `
@@ -35,7 +34,7 @@ function ShowPlanner1() {
                 
                 for (let index3 = 0; index3 < CoursesInYearAndSem.length; index3++) {
                     const element = CoursesInYearAndSem[index3];
-                    content += `<div class="card innerPlanner"><a href="#" data-bs-toggle="modal" data-bs-target="#userDetailsModal" class="innerPlannerHref fill-div">${global.Course.GetByCourseCode(element.courseCode).courseName}</a></div>`;
+                    content += `<div class="card innerPlanner"><a href="#" data-bs-toggle="modal" data-bs-target="#tasksModal" class="innerPlannerHref fill-div">${global.Course.GetByCourseCode(element.courseCode).courseName}</a></div>`;
                 }
                 content += `</div>`;
             }
