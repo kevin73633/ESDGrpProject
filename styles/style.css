@@ -551,6 +551,11 @@ body.index-container {
   box-shadow: 0px 0px 5px #fff;
 }
 
+.innerPlannerHref {
+  color: var(--headerText-color);
+  text-decoration: none;
+}
+
 .form-select {
   background-color: var(--card-color) !important;
   color: var(--opp-color) !important;

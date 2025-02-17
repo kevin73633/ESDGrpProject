@@ -553,7 +553,11 @@ body.index-container{
     text-align: left;
     box-shadow: 0px 0px 5px #fff;
 }
-
+.innerPlannerHref
+{
+	color: var(--headerText-color);
+	text-decoration: none;
+}
 
 //Input
 .form-select{
