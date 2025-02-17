@@ -7,13 +7,13 @@ import  { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, sign
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyCCo6vTfAeWwN4-dVCwcVozAkDSOlNEF_k",
-  authDomain: "wad2-b1ba1.firebaseapp.com",
-  databaseURL: "https://wad2-b1ba1-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "wad2-b1ba1",
-  storageBucket: "wad2-b1ba1.appspot.com",
-  messagingSenderId: "146287601431",
-  appId: "1:146287601431:web:845da202141a53e241f952"
+  apiKey: "AIzaSyAQjNGONrPGJ6nZOuLGrLbyJ6sOiTmZr28",
+  authDomain: "esdproj-ae595.firebaseapp.com",
+  databaseURL: "https://esdproj-ae595-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "esdproj-ae595",
+  storageBucket: "esdproj-ae595.firebasestorage.app",
+  messagingSenderId: "248176280827",
+  appId: "1:248176280827:web:e09ebfb1dd1867f2fc1c5e"
 };
 
 // Initialize Firebase
