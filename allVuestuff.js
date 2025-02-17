@@ -1,3 +1,4 @@
+import * as global from './global.js';
 const app = Vue.createApp({
 
 })
@@ -109,16 +110,12 @@ app.component('hamburger-button', {
     `,
     methods: {
         expandSidebar() {
-            sideNav = document.getElementById("sidebar");
-            hamburger = document.getElementById("toggleSidebar");
-            mainContent = document.getElementById("content")
-            logo = document.getElementById("logo")
-            icontext = document.getElementsByClassName("icon-text")
-        
-            MenuMinimise = document.getElementById("desktopMenuMinimise")
-            MenuExtend = document.getElementById("desktopMenuExpand")
-        
-            topNav = document.getElementById("navbartop")
+            var sideNav = document.getElementById("sidebar");
+            var mainContent = document.getElementById("content")
+            var logo = document.getElementById("logo")
+            var MenuMinimise = document.getElementById("desktopMenuMinimise")
+            var MenuExtend = document.getElementById("desktopMenuExpand")
+            var topNav = document.getElementById("navbartop")
         
             sideNav.style.width = "280px"
             sideNav.classList.remove('minimized');
@@ -138,14 +135,12 @@ app.component('hamburger-button', {
             MenuExtend.style.display = "none"
         },
         minimiseSidebar() {
-            sideNav = document.getElementById("sidebar");
-            mainContent = document.getElementById("content")
-            logo = document.getElementById("logo")
-            icontext = document.getElementsByClassName("icon-text")
-        
-            MenuMinimise = document.getElementById("desktopMenuMinimise")
-            MenuExtend = document.getElementById("desktopMenuExpand")
-            topNav = document.getElementById("navbartop")
+            var sideNav = document.getElementById("sidebar");
+            var mainContent = document.getElementById("content")
+            var logo = document.getElementById("logo")
+            var MenuMinimise = document.getElementById("desktopMenuMinimise")
+            var MenuExtend = document.getElementById("desktopMenuExpand")
+            var topNav = document.getElementById("navbartop")
         
             sideNav.style.width = "80px"
             sideNav.classList.add('minimized');
@@ -163,12 +158,13 @@ app.component('hamburger-button', {
             MenuExtend.style.display = "block"
         },
         mobileNav(){
-            crossHamburger = document.getElementById("mobileToggleSideBar");
-            sideNav = document.getElementById("sidebar");
+            var crossHamburger = document.getElementById("mobileToggleSideBar");
+            var sideNav = document.getElementById("sidebar");
+            var logo = document.getElementById("logo")
+            var iconText = document.getElementsByClassName("icon-text")
+
             sideNav.style.display = "block"
             sideNav.style.zIndex =999999;
-            logo = document.getElementById("logo")
-            iconText = document.getElementsByClassName("icon-text")
             sideNav.style.width = "300px"
             logo.style.display = "block"
         
@@ -196,27 +192,27 @@ app.component('hamburger-button', {
             
         },
         minMobileNav() {
-            crossHamburger = document.getElementById("mobileToggleSideBar");
+            var crossHamburger = document.getElementById("mobileToggleSideBar");
+            var sideNav = document.getElementById("sidebar");
+            var overlay = document.getElementById("overlay");
+
             crossHamburger.classList.add("d-none");
         
-            sideNav = document.getElementById("sidebar");
             sideNav.style.display = "none";
         
-            overlay = document.getElementById("overlay");
             if (overlay) {
                 overlay.remove();
             }
         },
         responsiveNav(){
-            sideNav = document.getElementById("sidebar");
-            hamburger = document.getElementById("toggleSidebar");
-            mainContent = document.getElementById("content")
-            logo = document.getElementById("logo")
-            iconText = document.getElementsByClassName("icon-text")
-            MenuMinimise = document.getElementById("desktopMenuMinimise")
-            MenuExtend = document.getElementById("desktopMenuExpand")
-        
-            topNav = document.getElementById("navbartop")
+            var sideNav = document.getElementById("sidebar");
+            var hamburger = document.getElementById("toggleSidebar");
+            var mainContent = document.getElementById("content")
+            var logo = document.getElementById("logo")
+            var iconText = document.getElementsByClassName("icon-text")
+            var MenuMinimise = document.getElementById("desktopMenuMinimise")
+            var MenuExtend = document.getElementById("desktopMenuExpand")
+            var topNav = document.getElementById("navbartop")
         
             if (window.innerWidth<480){
                 sideNav.style.display = "none"
