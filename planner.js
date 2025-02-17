@@ -80,11 +80,17 @@ function createForm(modalBody) {
     // <label for="course" class="form-label">${course}</label>
     /* Creates form in modal */
     modalBody.innerHTML = ""
-    for (let index = 0; index < 5; index++) {
-        var form = `<form id="selectSemester">
+    var tl = global.GetTaskListByCourse(global.currCourse);
+    for (let index = 0; index < tl.length; index++) {
+        var taskName = tl[index].taskName;
+        taskName = taskName.replace("A", "Assignment ");
+        taskName = taskName.replace("Q", "Quiz ");
+        taskName = taskName.replace("CP", "Class Participation");
+        var form = `
+            <form id="fillInGrades">
                 <div class="row mb-3 justify-content-center">
                     <div class="col-5">
-                         <label for="course" class="form-label">bruh</label>
+                         <label for="course" class="form-label">${taskName}</label>
                     </div>
                     <div class="col-5">
                         <select id = "_dropdown" class="form-select" aria-label="semester">
@@ -182,6 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     global.SetCurrentUser(JSON.parse(sessionStorage.getItem("currUser")));
     global.SetAllCourses(JSON.parse(sessionStorage.getItem("allCourses")));
+    global.SetAllTaskLists(JSON.parse(sessionStorage.getItem("allTaskLists")));
     document.getElementById("logoutBtn").onclick = function() {global.logout();};
     document.getElementById("nameheader").textContent = global.currUser.username.replace(/_+$/, ' ');
     document.getElementById("profileData").textContent = `Current Sem: ${global.currUser.currentYearAndSem} | GPA: ${(Math.round(global.currUser.gpa * 100) / 100).toFixed(2)}`;

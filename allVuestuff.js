@@ -95,7 +95,7 @@ app.component('tasks-menu', {
                 </div>
                 <div class="modal-body text-center" id="tasksModalBody"></div>
                 <div class="modal-footer justify-content-center">
-                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="buttonToAdd">Confirm Grades</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="buttonToConfirmGrades">Confirm Grades</button>
                 </div>
             </div>
         </div>

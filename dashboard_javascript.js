@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   global.SetCurrentUser(JSON.parse(sessionStorage.getItem("currUser")));
   global.SetAllCourses(JSON.parse(sessionStorage.getItem("allCourses")));
+  global.SetAllTaskLists(JSON.parse(sessionStorage.getItem("allTaskLists")));
   UpdateCoursesList();
   document.getElementById("logoutBtn").onclick = function() {global.logout();};
   // User is signed in, see docs for a list of available properties

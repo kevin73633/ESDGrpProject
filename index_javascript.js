@@ -77,29 +77,51 @@ document.addEventListener('DOMContentLoaded', function() {
                 //console.log(key + " -> " + user.username + " , " + user.gpa);
                 // .. process the data here! 
             }
-            var localuser =  ref(global.db, 'users/' + uid);
-            get(localuser, `users/${uid}`).then((snapshot) => {
-              if (snapshot.exists()) {
-                console.log("User Exists!");
-                var userData = snapshot.val();
-                var userCourses = userData["courses"];
-                if (userCourses == null)
-                  userCourses = [];
-                global.SetCurrentUser(new global.User(user.uid, userData["username"], userData["GPA"], userCourses, userData["degree"], userData["currentYearAndSem"]));
-                sessionStorage.setItem("currUser",  JSON.stringify(global.currUser));
-                global.SetAllCourses(global.allCourses);
-                sessionStorage.setItem("allCourses",  JSON.stringify(global.allCourses));
-                GoToDashboard();
-            
-              }
-              else
+            get(global.tasksRef, "tasks").then((snapshot) => {
+              if (snapshot.exists()) 
               {
-                global.CreateNewUser(user);
-                sessionStorage.setItem("allCourses",  JSON.stringify(global.allCourses));
-                //showpopup
-                $('#userDetailsModal').show();
-                //GoToDashboard();
-            
+                var result = snapshot.val();
+                for (var key of Object.keys(result)) {
+                    // this will give you the key & values for all properties
+                    var temp = result[key];
+                    var taskList = [];
+                    var taskListArray = Object.keys(temp["taskList"]).map((key) => [key, temp["taskList"][key]]);
+                    for (var task of taskListArray) {
+                      taskList.push(new global.Task(task[1]['taskName'], task[1]['taskWeightage']))
+                    }
+                    var currTaskList = new global.TaskList(key, taskList);
+                    global.allTaskLists.push(currTaskList);
+
+                }
+                console.log(global.allTaskLists);
+                var localuser =  ref(global.db, 'users/' + uid);
+                get(localuser, `users/${uid}`).then((snapshot) => {
+                  if (snapshot.exists()) {
+                    console.log("User Exists!");
+                    var userData = snapshot.val();
+                    var userCourses = userData["courses"];
+                    if (userCourses == null)
+                      userCourses = [];
+                    global.SetCurrentUser(new global.User(user.uid, userData["username"], userData["GPA"], userCourses, userData["degree"], userData["currentYearAndSem"]));
+                    sessionStorage.setItem("currUser",  JSON.stringify(global.currUser));
+                    global.SetAllCourses(global.allCourses);
+                    sessionStorage.setItem("allCourses",  JSON.stringify(global.allCourses));
+                    global.SetAllCourses(global.allTaskLists);
+                    sessionStorage.setItem("allTaskLists",  JSON.stringify(global.allTaskLists));
+                    GoToDashboard();
+                
+                  }
+                  else
+                  {
+                    global.CreateNewUser(user);
+                    sessionStorage.setItem("allCourses",  JSON.stringify(global.allCourses));
+                    sessionStorage.setItem("allTaskLists",  JSON.stringify(global.allTaskLists));
+                    //showpopup
+                    $('#userDetailsModal').show();
+                    //GoToDashboard();
+                
+                  }
+                });
               }
             });
         }

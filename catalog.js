@@ -393,6 +393,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     global.SetCurrentUser(JSON.parse(sessionStorage.getItem("currUser")));
     global.SetAllCourses(JSON.parse(sessionStorage.getItem("allCourses")));
+    global.SetAllTaskLists(JSON.parse(sessionStorage.getItem("allTaskLists")));
     document.getElementById("nameheader").textContent = global.currUser.username.replace(/_+$/, ' ');
     document.getElementById("profileData").textContent = `Current Sem: ${global.currUser.currentYearAndSem} | GPA: ${(Math.round(global.currUser.gpa * 100) / 100).toFixed(2)}`;
     // console.log(global.currUser);

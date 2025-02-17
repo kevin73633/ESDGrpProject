@@ -24,9 +24,11 @@ const auth = getAuth();
 //REALTIME DATABASE
 const db = getDatabase();
 const coursesRef = ref(db, 'courses/');
+const tasksRef = ref(db, 'tasks/');
 
 var currUser = null;
 var allCourses = [];
+var allTaskLists = [];
 var currCourse = null;
 function CreateNewUser(user) {
     var initialGPA = 0.0;
@@ -46,6 +48,7 @@ function logout () {
         allCourses = null;
         sessionStorage.setItem("allCourses",  null);
         sessionStorage.setItem("currUser",  null);
+        sessionStorage.setItem("allTaskLists",  null);
         window.location.href = "index.html"; 
         //
       }).catch((error) => {
@@ -60,6 +63,28 @@ function SetCurrentCourse(coursecode)
 {
     currCourse = coursecode;
 }
+function GetTaskListByCourse(courseCode)
+{
+  for (let index = 0; index < allTaskLists.length; index++) {
+    const element = allTaskLists[index];
+    if (element.courseCode == courseCode)
+    {
+      return element.taskList;
+    }
+  }
+}
+function SetAllTaskLists(taskLists)
+{
+  allTaskLists = [];
+  for (var tl of taskLists)
+    {
+      var taskListTemp = [];
+      for (let index = 0; index < tl["taskList"].length; index++) {
+        taskListTemp.push(new Task(tl["taskList"][index]["taskName"], tl["taskList"][index]["taskWeightage"]));
+      }
+      allTaskLists.push(new TaskList(tl["courseCode"], taskListTemp));
+    }
+  }
 function SetAllCourses(courses)
 {
     allCourses = [];
@@ -93,6 +118,14 @@ function CreateNewTaskList(courseCode, TaskList) {
   set(ref(db, 'tasks/' + courseCode), {
     taskList: TaskList,
   });
+}
+class TaskList
+{
+  constructor(courseCode, taskList)
+  {
+    this.courseCode = courseCode,
+    this.taskList = taskList
+  }
 }
 class Task
 {
@@ -345,7 +378,12 @@ export
     CreateNewUser,
     SetCurrentUser,
     CreateNewTaskList,
+    TaskList,
     Task,
+    tasksRef,
+    allTaskLists,
+    SetAllTaskLists,
+    GetTaskListByCourse,
     logout,
 
 }
