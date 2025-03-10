@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `uid` varchar(64) NOT NULL,
   `name` varchar(255) NOT NULL,
   `rating` int(64) NOT NULL,
-  `cardnum` varchar(255) NOT NULL,
+  `accnum` varchar(255) NOT NULL,
   PRIMARY KEY (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS `user` (
 -- Dumping data for table `user`
 --
 
-INSERT INTO `user` (`uid`, `name`, `rating`, `cardnum`) VALUES
+INSERT INTO `user` (`uid`, `name`, `rating`, `accnum`) VALUES
 ('12345678', 'user1', 0, '1234123412341234'),
 ('22345678', 'user2', 0, '2234123412341234'),
 ('32345678', 'user3', 0, '3234123412341234'),
