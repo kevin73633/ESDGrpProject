@@ -29,14 +29,14 @@ class User(db.Model):
     uid = db.Column(db.String(64), primary_key=True)
     name = db.Column(db.String(32), nullable=False)
     rating = db.Column(db.Integer, nullable=False)
-    cardnum = db.Column(db.String(64), nullable=False)
+    accnum = db.Column(db.String(64), nullable=False)
 
     def json(self):
         dto = {
             'uid': self.uid,
             'name': self.name,
             'rating': self.rating,
-            'cardnum': self.cardnum,
+            'accnum': self.accnum,
         }
 
         # dto['order_item'] = []
