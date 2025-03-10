@@ -67,7 +67,42 @@ def get_all():
             "message": "There are no users."
         }
     ), 404
-
+@app.route("/user/<string:uid>", methods=['GET'])
+def get_single_user(uid):
+    user = db.session.scalar(db.select(User).filter_by(uid=uid))
+    if user:
+        return jsonify(
+            {
+                "code": 200,
+                "data": {
+                    "user": [user.json()]
+                }
+            }
+        )
+    return jsonify(
+        {
+            "code": 404,
+            "message": "There are no users."
+        }
+    ), 404
+@app.route("/user/getAccNumFromUser/<string:uid>", methods=['GET'])
+def get_single_user_Acc(uid):
+    user = db.session.scalar(db.select(User).filter_by(uid=uid))
+    if user:
+        return jsonify(
+            {
+                "code": 200,
+                "data": {
+                    "AccNum": [user.json()["accnum"]]
+                }
+            }
+        )
+    return jsonify(
+        {
+            "code": 404,
+            "message": "There are no users."
+        }
+    ), 404
 
 # @app.route("/order/<string:order_id>")
 # def find_by_order_id(uid):
