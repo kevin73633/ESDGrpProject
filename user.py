@@ -195,5 +195,5 @@ def get_single_user_Acc(uid):
 
 
 if __name__ == '__main__':
-    print("This is flask for " + os.path.basename(__file__) + ": manage orders ...")
+    print("This is flask for " + os.path.basename(__file__) + ": users ...")
     app.run(host='0.0.0.0', port=5001, debug=True)
