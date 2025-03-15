@@ -78,6 +78,41 @@ INSERT INTO `deal` (`dealid`, `buyerid`, `sellerid`, `price`, `status`) VALUES
 COMMIT;
 
 
+--
+-- Table structure for table `chat`
+--
+
+DROP TABLE IF EXISTS `chat`;
+CREATE TABLE IF NOT EXISTS `chat` (
+  `messageid` varchar(64) NOT NULL,
+  `senderid` varchar(64) NOT NULL,
+  `receiverid` varchar(64) NOT NULL,
+  `message` varchar(255) NOT NULL,
+  `sentat` DATETIME DEFAULT now(),
+  PRIMARY KEY (`messageid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+DELIMITER //
+CREATE TRIGGER before_insert_chat
+BEFORE INSERT ON chat
+FOR EACH ROW
+BEGIN
+    SET NEW.messageid = LPAD(FLOOR(RAND() * 100000000), 8, '0'); -- Generates an 8-digit random number
+END;
+//
+DELIMITER ;
+
+
+
+
+--
+-- Dumping data for table `chat`
+--
+
+INSERT INTO `chat` (`senderid`, `receiverid`, `message`) VALUES
+(12345678, 22345678, 'bruhhhhhhhhh');
+COMMIT;
+
+
 
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
