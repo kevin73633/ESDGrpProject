@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS `account` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
--- Dumping data for table `user`
+-- Dumping data for table `account`
 --
 
 INSERT INTO `account` (`accnum`, `amount`) VALUES
@@ -104,7 +104,27 @@ INSERT INTO `account` (`accnum`, `amount`) VALUES
 ('8234123412341234', 8000);
 COMMIT;
 
+--
+-- Table structure for table `paymentrecord`
+--
 
+DROP TABLE IF EXISTS `paymentrecord`;
+CREATE TABLE IF NOT EXISTS `paymentrecord` (
+  `txnid` varchar(64) NOT NULL,
+  `accnum_from` varchar(255) NOT NULL,
+  `accnum_to` varchar(255) NOT NULL,
+  `txnamt` int(64) NOT NULL,
+  `status` varchar(64) NOT NULL,
+  PRIMARY KEY (`txnid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `paymentrecord`
+--
+
+INSERT INTO `paymentrecord` (`txnid`, `accnum_from`, `accnum_to`, `txnamt`, `status`) VALUES
+('1234', '1234123412341234', '0000000000000001', 100, 'successful');
+COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
