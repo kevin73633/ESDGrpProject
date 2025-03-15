@@ -77,6 +77,32 @@ INSERT INTO `deal` (`dealid`, `buyerid`, `sellerid`, `price`, `status`) VALUES
 ('11111111', '12345678', '22345678', 0, 0);
 COMMIT;
 
+--
+-- Table structure for table `account`
+--
+
+DROP TABLE IF EXISTS `account`;
+CREATE TABLE IF NOT EXISTS `account` (
+  `accnum` varchar(255) NOT NULL,
+  `amount` int(64) NOT NULL,
+  PRIMARY KEY (`accnum`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `user`
+--
+
+INSERT INTO `account` (`accnum`, `amount`) VALUES
+('0000000000000001', 100000),
+('1234123412341234', 1000),
+('2234123412341234', 2000),
+('3234123412341234', 3000),
+('4234123412341234', 4000),
+('5234123412341234', 5000),
+('6234123412341234', 6000),
+('7234123412341234', 7000),
+('8234123412341234', 8000);
+COMMIT;
 
 
 
