@@ -69,6 +69,26 @@ def get_all():
         }
     ), 404
 
+@app.route("/chat/getmessagebetween/<string:senderid>/<string:receiverid>", methods=['GET'])
+def getChatBetween(senderid, receiverid):
+    messages = db.session.scalars(db.select(Chat).filter_by(senderid=senderid).filter_by(receiverid=receiverid).order_by(Chat.sentat))
+    print(messages)
+    if messages:
+        return jsonify(
+            {
+                "code": 200,
+                "data": {
+                    "messages": [message.json() for message in messages]
+                }
+            }
+        )
+    return jsonify(
+        {
+            "code": 404,
+            "message": "There are no messages."
+        }
+    ), 404
+
 if __name__ == '__main__':
     print("This is flask for " + os.path.basename(__file__) + ": chats ...")
     app.run(host='0.0.0.0', port=5001, debug=True)

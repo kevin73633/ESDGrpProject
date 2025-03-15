@@ -109,7 +109,11 @@ DELIMITER ;
 --
 
 INSERT INTO `chat` (`senderid`, `receiverid`, `message`) VALUES
-(12345678, 22345678, 'bruhhhhhhhhh');
+(12345678, 22345678, 'bruh'),
+(12345678, 22345678, 'bruhh'),
+(12345678, 22345678, 'bruhhh'),
+(12345678, 22345678, 'bruhhhh'),
+(12345678, 22345678, 'bruhhhhhh');
 COMMIT;
 
 
