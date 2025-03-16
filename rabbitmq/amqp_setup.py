@@ -8,7 +8,8 @@ import pika
 
 amqp_host = "localhost"
 amqp_port = 5672
-exchange_name = "order_topic"
+notification_exchange = "notification_topic" #specific to posting notifs
+error_exchange = "error_topic" #more for errors across all services 
 exchange_type = "topic"
 
 
@@ -37,6 +38,20 @@ def create_exchange(hostname, port, exchange_name, exchange_type):
 
     return channel
 
+notification_channel = create_exchange(
+    amqp_host, 
+    amqp_port, 
+    notification_exchange, 
+    exchange_type
+    )
+
+error_channel = create_exchange(
+    amqp_host, 
+    amqp_port, 
+    error_exchange, 
+    exchange_type
+    )
+
 
 def create_queue(channel, exchange_name, queue_name, routing_key):
     print(f"Bind to queue: {queue_name}")
@@ -49,23 +64,30 @@ def create_queue(channel, exchange_name, queue_name, routing_key):
     )
 
 
-channel = create_exchange(
-    hostname=amqp_host,
-    port=amqp_port,
-    exchange_name=exchange_name,
-    exchange_type=exchange_type,
-)
+create_queue(
+    notification_channel, 
+    notification_exchange, 
+    "confirm_deal_notification", 
+    "notif.confirm_deal"
+    )
 
 create_queue(
-    channel=channel,
-    exchange_name=exchange_name,
-    queue_name="Error",
-    routing_key="*.error",
-)
+    notification_channel, 
+    notification_exchange, 
+    "verify_deal_notification", 
+    "notif.verify_deal"
+    )
 
 create_queue(
-    channel=channel,
-    exchange_name=exchange_name,
-    queue_name="Activity_Log",
-    routing_key="#",
-)
+    notification_channel, 
+    notification_exchange, 
+    "report_chat_notification", 
+    "notif.report_chat"
+    )
+
+create_queue(
+    error_channel, 
+    error_exchange, 
+    "Error", 
+    "*.error"
+    ) 

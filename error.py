@@ -5,7 +5,7 @@ import json
 
 rabbit_host = "localhost"
 rabbit_port = 5672
-exchange_name = "order_topic"
+exchange_name = "error_topic"
 exchange_type = "topic"
 queue_name = "Error"
 
@@ -22,7 +22,7 @@ def callback(channel, method, properties, body):
 
 
 if __name__ == "__main__":
-    print(f"This is {os.path.basename(__file__)} - amqp consumer...")
+    print(f"This is {os.path.basename(__file__)} - amqp error consumer...")
     try:
         amqp_lib.start_consuming(
             rabbit_host, rabbit_port, exchange_name, exchange_type, queue_name, callback
