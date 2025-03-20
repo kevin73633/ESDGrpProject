@@ -24,7 +24,7 @@ const routes = [
     props: true, // This allows you to pass the :id parameter as a prop to the component
   },
   {
-    path: '/chat/:dealId',
+    path: '/chat',
     name: 'Chat',
     component: Chat,
     props: true,
