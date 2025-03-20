@@ -9,8 +9,8 @@
             <!-- Header with back button -->
             <div class="p-3 border-bottom">
               <div class="d-flex align-items-center">
-                <button class="btn btn-sm me-3">
-                  <i class="fas fa-arrow-left"></i>
+                <button class="btn btn-link text-dark me-3 p-0" @click="goBack" style="font-size: 1.5rem;">
+                  <i class="bi bi-arrow-left"></i>
                 </button>
                 <h6 class="mb-0">Conversations</h6>
               </div>
@@ -67,6 +67,18 @@
           
           <!-- Chat content area (scrollable) -->
           <div class="flex-grow-1 overflow-auto p-3" id="chat-content">
+            <!-- Deal Confirmation Banner (when confirmed) -->
+            <div v-if="dealConfirmed" class="alert alert-success mb-3 d-flex align-items-center">
+              <i class="fas fa-check-circle me-2 fs-5"></i>
+              <div>
+                <strong>Deal Confirmed!</strong> 
+                <p class="mb-0 small">This deal has been confirmed and is now active.</p>
+              </div>
+              <div class="ms-auto">
+                <span class="badge bg-success">Confirmed</span>
+              </div>
+            </div>
+          
             <!-- Deal card -->
             <div class="card mb-3">
               <div class="card-body position-relative">
@@ -102,9 +114,16 @@
               </div>
             </div>
             
-            <!-- Confirm Deal Button -->
+            <!-- Confirm/Verify Deal Button -->
             <div class="mb-4">
-              <button @click="showDealConfirmation" class="btn btn-primary">Confirm Deal</button>
+              <button 
+                @click="dealConfirmed ? verifyDeal() : showDealConfirmation()" 
+                class="btn" 
+                :class="dealConfirmed ? 'btn-success' : 'btn-primary'"
+              >
+                <i :class="dealConfirmed ? 'fas fa-check-double me-2' : 'fas fa-check me-2'"></i>
+                {{ dealConfirmed ? 'Verify Deal' : 'Confirm Deal' }}
+              </button>
             </div>
             
             <!-- Chat bubbles -->
@@ -349,6 +368,15 @@ export default {
     };
   },
   methods: {
+    goBack() {
+      // Try to use browser back if possible
+      if (window.history.length > 1) {
+        this.$router.go(-1);
+      } else {
+        // Fallback to home route if there's no history
+        this.$router.push({ name: 'home' });
+      }
+    },
     sendMessage() {
       // Validate message content
       if (!this.newMessage.trim()) {
@@ -428,13 +456,19 @@ export default {
       // Close the modal
       this.showConfirmationModal = false;
       
-      // Add confirmation message to chat
-      this.messages.push({
-        id: Date.now(),
-        text: "Deal has been confirmed successfully! 🎉",
-        sent: false,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      });
+      // Scroll to top to show the confirmation banner
+      const chatContent = document.getElementById('chat-content');
+      if (chatContent) {
+        chatContent.scrollTop = 0;
+      }
+    },
+    verifyDeal() {
+      // In a real app, this would involve backend logic
+      // Here we just show a notification
+      alert("Deal verification submitted. This would typically involve additional verification steps in a real app.");
+      
+      // You could add a verified status in a real implementation
+      // this.dealVerified = true;
     },
     showReportDialog() {
       this.showReportModal = true;

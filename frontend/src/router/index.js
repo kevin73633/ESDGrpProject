@@ -19,7 +19,7 @@ const routes = [
   },
   {
     path: '/deal/:id',
-    name: 'DealDetails',
+    name: 'dealDetails',
     component: DealDetails,
     props: true, // This allows you to pass the :id parameter as a prop to the component
   },
