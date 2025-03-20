@@ -67,6 +67,24 @@ def get_all():
         }
     ), 404
 
+@app.route("/paymentrecord/<string:txnid>", methods=['GET'])
+def find_by_txnid(txnid):
+    """Get a specific payment record by transaction ID"""
+    payment_record = db.session.query(PaymentRecord).filter_by(txnid=txnid).first()
+    if payment_record:
+        return jsonify(
+            {
+                "code": 200,
+                "data": payment_record.json()
+            }
+        )
+    return jsonify(
+        {
+            "code": 404,
+            "message": f"Payment record with ID '{txnid}' not found."
+        }
+    ), 404
+
 @app.route("/paymentrecord/create", methods=['POST'])
 def create_payment_record():
     """
