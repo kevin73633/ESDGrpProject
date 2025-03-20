@@ -83,6 +83,16 @@ def get_single_accnum(accnum):
 
 @app.route("/account/escrow", methods=['POST'])
 def escrow_funds():
+    """
+    Scenario 1: Buyer is escrowing money to be transferred to seller after exchange
+    - Deduct price from buyer's account and add to escrow account
+    
+    Request body:
+    {
+        "accnum": "1234123412341234",  # Buyer's account number
+        "amount": 100                   # Amount to escrow
+    }
+    """
     data = request.get_json()
     
     if not data:
@@ -184,6 +194,16 @@ def escrow_funds():
     
 @app.route("/account/release", methods=['POST'])
 def release_funds():
+    """
+    Scenario 2: Seller receives funds from escrow after exchange verification
+    - Deduct price from escrow account and add to seller's account
+    
+    Request body:
+    {
+        "accnum": "5234123412341234",  # Seller's account number
+        "amount": 100                   # Amount to release
+    }
+    """
     data = request.get_json()
     
     if not data:
