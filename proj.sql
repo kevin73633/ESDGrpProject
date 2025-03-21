@@ -77,6 +77,21 @@ INSERT INTO `deal` (`dealid`, `buyerid`, `sellerid`, `price`, `status`) VALUES
 ('11111111', '12345678', '22345678', 0, 0);
 COMMIT;
 
+--#KAIZHE#--
+-- Table structure for table `ReportLog`
+--
+
+DROP TABLE IF EXISTS `ReportLog`;
+CREATE TABLE IF NOT EXISTS `ReportLog` (
+  `ReportID` INT AUTO_INCREMENT PRIMARY KEY,
+  `CreatedAt` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `UserID` INT NOT NULL,
+  `ReportedUserID` INT NOT NULL,
+  `Reason` VARCHAR(225) NOT NULL,
+  `Status` VARCHAR(50) NOT NULL DEFAULT 'Pending'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+COMMIT;
 
 
 
