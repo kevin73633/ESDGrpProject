@@ -77,6 +77,55 @@ INSERT INTO `deal` (`dealid`, `buyerid`, `sellerid`, `price`, `status`) VALUES
 ('11111111', '12345678', '22345678', 0, 0);
 COMMIT;
 
+--
+-- Table structure for table `account`
+--
+
+DROP TABLE IF EXISTS `account`;
+CREATE TABLE IF NOT EXISTS `account` (
+  `accnum` varchar(255) NOT NULL,
+  `amount` int(64) NOT NULL,
+  PRIMARY KEY (`accnum`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+--
+-- Dumping data for table `account`
+--
+
+INSERT INTO `account` (`accnum`, `amount`) VALUES
+('0000000000000001', 100000),
+('1234123412341234', 1000),
+('2234123412341234', 2000),
+('3234123412341234', 3000),
+('4234123412341234', 4000),
+('5234123412341234', 5000),
+('6234123412341234', 6000),
+('7234123412341234', 7000),
+('8234123412341234', 8000);
+COMMIT;
+
+--
+-- Table structure for table `paymentrecord`
+--
+
+DROP TABLE IF EXISTS `paymentrecord`;
+CREATE TABLE IF NOT EXISTS `paymentrecord` (
+  `txnid` varchar(64) NOT NULL,
+  `accnum_from` varchar(255) NOT NULL,
+  `accnum_to` varchar(255) NOT NULL,
+  `txnamt` int(64) NOT NULL,
+  `status` varchar(64) NOT NULL,
+  PRIMARY KEY (`txnid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `paymentrecord`
+--
+
+INSERT INTO `paymentrecord` (`txnid`, `accnum_from`, `accnum_to`, `txnamt`, `status`) VALUES
+('1234', '1234123412341234', '0000000000000001', 100, 'successful');
+COMMIT;
 
 --
 -- Table structure for table `chat`
@@ -115,7 +164,6 @@ INSERT INTO `chat` (`senderid`, `receiverid`, `message`) VALUES
 (12345678, 22345678, 'bruhhhh'),
 (12345678, 22345678, 'bruhhhhhh');
 COMMIT;
-
 
 
 
