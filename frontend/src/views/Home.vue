@@ -258,6 +258,7 @@
 </template>
 
 <script>
+import axios from 'axios';
 import { Modal, Toast } from 'bootstrap'; // Import Bootstrap components
 
 export default {
@@ -298,54 +299,54 @@ export default {
             joinDate: "2023-01-15"
           }
         },
-        { 
-          id: 2, 
-          title: "Donut Box for $15", 
-          category: "food", 
-          description: "Need someone to share a box of donuts. 12 pieces of assorted flavors.", 
-          image: "/api/placeholder/300/150", 
-          location: "North Campus",
-          price: "15.00",
-          likes: 18,
-          createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-          user: {
-            name: "John Smith",
-            avatar: "/api/placeholder/50/50",
-            joinDate: "2022-11-20"
-          }
-        },
-        { 
-          id: 3, 
-          title: "50% Off Bluetooth Earbuds", 
-          category: "electronics", 
-          description: "I have a coupon for 50% off wireless earbuds at TechStore. Looking to share with someone.", 
-          image: "/api/placeholder/300/150", 
-          location: "East Mall",
-          price: "25.00",
-          likes: 32,
-          createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-          user: {
-            name: "Mike Johnson",
-            avatar: "/api/placeholder/50/50",
-            joinDate: "2023-02-05"
-          }
-        },
-        { 
-          id: 4, 
-          title: "Buy 2 Get 1 Free Books", 
-          category: "books", 
-          description: "Bookstore promotion, buy 2 books and get 1 free. Let's pool together to maximize the deal.", 
-          image: "/api/placeholder/300/150", 
-          location: "Central Library",
-          price: "30.00",
-          likes: 15,
-          createdAt: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
-          user: {
-            name: "Sarah Williams",
-            avatar: "/api/placeholder/50/50",
-            joinDate: "2023-01-10"
-          }
-        }
+        // { 
+        //   id: 2, 
+        //   title: "Donut Box for $15", 
+        //   category: "food", 
+        //   description: "Need someone to share a box of donuts. 12 pieces of assorted flavors.", 
+        //   image: "/api/placeholder/300/150", 
+        //   location: "North Campus",
+        //   price: "15.00",
+        //   likes: 18,
+        //   createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+        //   user: {
+        //     name: "John Smith",
+        //     avatar: "/api/placeholder/50/50",
+        //     joinDate: "2022-11-20"
+        //   }
+        // },
+        // { 
+        //   id: 3, 
+        //   title: "50% Off Bluetooth Earbuds", 
+        //   category: "electronics", 
+        //   description: "I have a coupon for 50% off wireless earbuds at TechStore. Looking to share with someone.", 
+        //   image: "/api/placeholder/300/150", 
+        //   location: "East Mall",
+        //   price: "25.00",
+        //   likes: 32,
+        //   createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+        //   user: {
+        //     name: "Mike Johnson",
+        //     avatar: "/api/placeholder/50/50",
+        //     joinDate: "2023-02-05"
+        //   }
+        // },
+        // { 
+        //   id: 4, 
+        //   title: "Buy 2 Get 1 Free Books", 
+        //   category: "books", 
+        //   description: "Bookstore promotion, buy 2 books and get 1 free. Let's pool together to maximize the deal.", 
+        //   image: "/api/placeholder/300/150", 
+        //   location: "Central Library",
+        //   price: "30.00",
+        //   likes: 15,
+        //   createdAt: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
+        //   user: {
+        //     name: "Sarah Williams",
+        //     avatar: "/api/placeholder/50/50",
+        //     joinDate: "2023-01-10"
+        //   }
+        // }
       ],
       newDeal: {
         title: "",
@@ -397,6 +398,14 @@ export default {
       return result;
     }
   },
+  mounted() {
+    axios.get('/user')
+    .then((response) => {
+      console.log(response);
+    }, (error) => {
+      console.log(error);
+    });
+    },
   methods: {
     openModal() {
       // Reset form data and validation errors
