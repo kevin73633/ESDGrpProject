@@ -163,6 +163,20 @@ INSERT INTO `chat` (`senderid`, `receiverid`, `message`) VALUES
 (12345678, 22345678, 'bruhhh'),
 (12345678, 22345678, 'bruhhhh'),
 (12345678, 22345678, 'bruhhhhhh');
+--#KAIZHE#--
+-- Table structure for table `ReportLog`
+--
+
+DROP TABLE IF EXISTS `ReportLog`;
+CREATE TABLE IF NOT EXISTS `ReportLog` (
+  `ReportID` INT AUTO_INCREMENT PRIMARY KEY,
+  `CreatedAt` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `UserID` INT NOT NULL,
+  `ReportedUserID` INT NOT NULL,
+  `Reason` VARCHAR(225) NOT NULL,
+  `Status` VARCHAR(50) NOT NULL DEFAULT 'Pending'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 COMMIT;
 
 

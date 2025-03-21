@@ -27,7 +27,7 @@ class ReportLog(db.Model):
     def json(self):
         return {
             "ReportID": self.ReportID,
-            "CreatedAt": self.CreatedAt,
+            "CreatedAt": self.CreatedAt.strftime("%Y-%m-%d %H:%M:%S"),
             "UserID": self.UserID,
             "ReportedUserID": self.ReportedUserID,
             "Reason": self.Reason,
