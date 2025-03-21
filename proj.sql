@@ -188,34 +188,34 @@ CREATE TABLE IF NOT EXISTS `ReportLog` (
 
 -- --------------------------------------------------------
 
---
--- Table structure for table `chatgpt`
---
+-- --
+-- -- Table structure for table `chatgpt`
+-- --
 
-DROP TABLE IF EXISTS `chatgpt`;
-CREATE TABLE IF NOT EXISTS `chatgpt` (
-  `chatgpt_id` varchar(64) NOT NULL,
-  `chat_id` varchar(64) NOT NULL,
-  `chat_content` text NOT NULL,
-  `buyer_id` varchar(64) NOT NULL,
-  `seller_id` varchar(64) NOT NULL,
-  `report_id` varchar(64) DEFAULT NULL,
-  `status` varchar(20) NOT NULL,
-  `content_categories` text,
-  `severity_level` varchar(10) DEFAULT NULL,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`chatgpt_id`),
-  KEY `chat_id` (`chat_id`),
-  KEY `buyer_id` (`buyer_id`),
-  KEY `seller_id` (`seller_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+-- DROP TABLE IF EXISTS `chatgpt`;
+-- CREATE TABLE IF NOT EXISTS `chatgpt` (
+--   `chatgpt_id` varchar(64) NOT NULL,
+--   `chat_id` varchar(64) NOT NULL,
+--   `chat_content` text NOT NULL,
+--   `buyer_id` varchar(64) NOT NULL,
+--   `seller_id` varchar(64) NOT NULL,
+--   `report_id` varchar(64) DEFAULT NULL,
+--   `status` varchar(20) NOT NULL,
+--   `content_categories` text,
+--   `severity_level` varchar(10) DEFAULT NULL,
+--   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--   PRIMARY KEY (`chatgpt_id`),
+--   KEY `chat_id` (`chat_id`),
+--   KEY `buyer_id` (`buyer_id`),
+--   KEY `seller_id` (`seller_id`)
+-- ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
---
--- Dumping data for table `chatgpt`
---
+-- --
+-- -- Dumping data for table `chatgpt`
+-- --
 
-INSERT INTO `chatgpt` (`chatgpt_id`, `chat_id`, `chat_content`, `buyer_id`, `seller_id`, `report_id`, `status`, `content_categories`, `severity_level`, `created_at`) VALUES
-('CGP00001', 'CHAT123', 'Hello, is the item still available for purchase?', '12345678', '22345678', NULL, 'safe', NULL, NULL, '2025-03-17 08:00:00'),
-('CGP00002', 'CHAT456', 'You are being very difficult. I am annoyed with this transaction.', '32345678', '42345678', 'REP00001', 'unsafe', '[\"harassment\"]', 'low', '2025-03-17 08:15:00'),
-('CGP00003', 'CHAT789', 'When can I expect the item to be shipped?', '52345678', '62345678', NULL, 'safe', NULL, NULL, '2025-03-17 08:30:00');
-COMMIT;
+-- INSERT INTO `chatgpt` (`chatgpt_id`, `chat_id`, `chat_content`, `buyer_id`, `seller_id`, `report_id`, `status`, `content_categories`, `severity_level`, `created_at`) VALUES
+-- ('CGP00001', 'CHAT123', 'Hello, is the item still available for purchase?', '12345678', '22345678', NULL, 'safe', NULL, NULL, '2025-03-17 08:00:00'),
+-- ('CGP00002', 'CHAT456', 'You are being very difficult. I am annoyed with this transaction.', '32345678', '42345678', 'REP00001', 'unsafe', '[\"harassment\"]', 'low', '2025-03-17 08:15:00'),
+-- ('CGP00003', 'CHAT789', 'When can I expect the item to be shipped?', '52345678', '62345678', NULL, 'safe', NULL, NULL, '2025-03-17 08:30:00');
+-- COMMIT;
