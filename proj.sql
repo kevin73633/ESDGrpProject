@@ -163,7 +163,8 @@ INSERT INTO `chat` (`senderid`, `receiverid`, `message`) VALUES
 (12345678, 22345678, 'bruhhh'),
 (12345678, 22345678, 'bruhhhh'),
 (12345678, 22345678, 'bruhhhhhh');
---#KAIZHE#--
+COMMIT;
+--
 -- Table structure for table `ReportLog`
 --
 
@@ -177,7 +178,6 @@ CREATE TABLE IF NOT EXISTS `ReportLog` (
   `Status` VARCHAR(50) NOT NULL DEFAULT 'Pending'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-COMMIT;
 
 
 
