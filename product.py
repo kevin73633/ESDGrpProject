@@ -7,7 +7,7 @@ import os
 
 app = Flask(__name__)
 # Change to MySQL connection with your specific credentials
-app.config["SQLALCHEMY_DATABASE_URI"] = environ.get("dbURL") or "mysql+mysqlconnector://root@localhost:3306/Project"
+app.config["SQLALCHEMY_DATABASE_URI"] = environ.get("dbURL") or "mysql+mysqlconnector://root:root@localhost:3306/Project"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -89,79 +89,145 @@ def create_product():
     
     # Basic validation
     if not all(key in data for key in ['title', 'category', 'description', 'location', 'price', 'userid']):
-        return jsonify({'error': 'Missing required fields'}), 400
+        return jsonify({
+            "code": 400,
+            "message": "Missing required fields"
+        }), 400
+        
+    try:
+        # Handle expires_at if provided
+        expires_at = None
+        if 'expires_at' in data and data['expires_at']:
+            expires_at = datetime.fromisoformat(data['expires_at'].replace('Z', '+00:00'))
+        
+        new_product = Product(
+            title=data['title'],
+            category=data['category'],
+            description=data['description'],
+            location=data['location'],
+            price=data['price'],
+            userid=data['userid'],
+            expires_at=expires_at
+        )
     
-    new_product = Product(
-        title=data['title'],
-        category=data['category'],
-        description=data['description'],
-        location=data['location'],
-        price=data['price'],
-        userid=data['userid'],
-        expires_at=data.get('expires_at')
-    )
-    
-    db.session.add(new_product)
-    db.session.commit()
-    
-    return jsonify(new_product.to_dict()), 201
+        db.session.add(new_product)
+        db.session.commit()
+        
+        return jsonify({
+            "code": 201,
+            "data": new_product.json(),
+            "message": "Product created successfully."
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "code": 500,
+            "message": f"An error occurred creating the product. {str(e)}"
+        }), 500
 
 @app.route('/products/<int:productid>', methods=['PUT'])
 def update_product(productid):
-    product = Product.query.get_or_404(productid)
-    data = request.get_json()
+    try:
+        product = db.session.get(Product, productid)
+        if not product:
+            return jsonify({
+                "code": 404,
+                "message": "Product not found."
+            }), 404
+        data = request.get_json()
     
-    # Update fields if they exist in the request
-    if 'title' in data:
-        product.title = data['title']
-    if 'category' in data:
-        product.category = data['category']
-    if 'description' in data:
-        product.description = data['description']
-    if 'location' in data:
-        product.location = data['location']
-    if 'price' in data:
-        product.price = data['price']
-    if 'expires_at' in data:
-        product.expires_at = data['expires_at']
+        # Update fields if they exist in the request
+        if 'title' in data:
+            product.title = data['title']
+        if 'category' in data:
+            product.category = data['category']
+        if 'description' in data:
+            product.description = data['description']
+        if 'location' in data:
+            product.location = data['location']
+        if 'price' in data:
+            product.price = data['price']
+        if 'expires_at' in data:
+            product.expires_at = data['expires_at']
+        
+        db.session.commit()
     
-    db.session.commit()
-    
-    return jsonify(product.to_dict())
+        return jsonify({
+            "code": 200,
+            "data": product.json(),
+            "message": "Product updated successfully."
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "code": 500,
+            "message": f"An error occurred updating the product. {str(e)}"
+        }), 500
 
 @app.route('/products/<int:productid>', methods=['DELETE'])
 def delete_product(productid):
-    product = Product.query.get_or_404(productid)
-    db.session.delete(product)
-    db.session.commit()
-    
-    return jsonify({'message': f'Product {productid} deleted successfully'})
+    try:
+        product = db.session.get(Product, productid)
+        if not product:
+            return jsonify({
+                "code": 404,
+                "message": "Product not found."
+            }), 404
+            
+        db.session.delete(product)
+        db.session.commit()
+        
+        return jsonify({
+            "code": 200,
+            "message": f"Product {productid} deleted successfully."
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "code": 500,
+            "message": f"An error occurred deleting the product. {str(e)}"
+        }), 500
 
 # Route to get products by user
 @app.route('/users/<string:userid>/products', methods=['GET'])
 def get_user_products(userid):
-    product = db.session.scalar(db.select(Product).filter_by(userid=userid))
-    if product:
+    productlist = db.session.scalars(db.select(Product).filter_by(userid=userid)).all()
+    if len(productlist):
         return jsonify(
             {
                 "code": 200,
                 "data": {
-                    "product": product.json()
+                    "products": [product.json() for product in productlist]
                 }
             }
         )
     return jsonify(
         {
             "code": 404,
-            "message": "There is no product."
+            "message": f"No products found for user {userid}."
         }
     ), 404
 
 # Route to get products by category
 @app.route('/products/category/<string:category>', methods=['GET'])
 def get_products_by_category(category):
-    products = Product.query.filter_by(category=category).all()
-    return jsonify([product.to_dict() for product in products])
+    productlist = db.session.scalars(db.select(Product).filter_by(category=category)).all()
+    if len(productlist):
+        return jsonify(
+            {
+                "code": 200,
+                "data": {
+                    "products": [product.json() for product in productlist]
+                }
+            }
+        )
+    return jsonify(
+        {
+            "code": 404,
+            "message": f"No products found in category {category}."
+        }
+    ), 404
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5005, debug=True)
