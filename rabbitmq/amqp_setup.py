@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 
 """
-A standalone script to create exchanges and queues on RabbitMQ.
+A standalone script to create exchanges and queues on RabbitMQ for the deal confirmation system.
 """
 
 import pika
+import os
 
-amqp_host = "localhost"
-amqp_port = 5672
-exchange_name = "order_topic"
+# Configuration
+amqp_host = os.environ.get('RABBITMQ_HOST') or "localhost"
+amqp_port = int(os.environ.get('RABBITMQ_PORT') or 5672)
+exchange_name = "deal_events"  # Changed to match the confirm_deal.py
 exchange_type = "topic"
 
 
@@ -35,7 +37,7 @@ def create_exchange(hostname, port, exchange_name, exchange_type):
     )
     # 'durable' makes the exchange survive broker restarts
 
-    return channel
+    return channel, connection
 
 
 def create_queue(channel, exchange_name, queue_name, routing_key):
@@ -49,13 +51,37 @@ def create_queue(channel, exchange_name, queue_name, routing_key):
     )
 
 
-channel = create_exchange(
+# Create exchange
+channel, connection = create_exchange(
     hostname=amqp_host,
     port=amqp_port,
     exchange_name=exchange_name,
     exchange_type=exchange_type,
 )
 
+# Create queues for the deal confirmation system
+create_queue(
+    channel=channel,
+    exchange_name=exchange_name,
+    queue_name="deal_confirmation_queue",
+    routing_key="deal.confirmed",
+)
+
+create_queue(
+    channel=channel,
+    exchange_name=exchange_name,
+    queue_name="payment_events_queue",
+    routing_key="deal.payment_released",
+)
+
+create_queue(
+    channel=channel,
+    exchange_name=exchange_name,
+    queue_name="notification_queue",
+    routing_key="deal.#",  # Subscribe to all deal-related events
+)
+
+# Keep the original error and activity log queues
 create_queue(
     channel=channel,
     exchange_name=exchange_name,
@@ -69,3 +95,10 @@ create_queue(
     queue_name="Activity_Log",
     routing_key="#",
 )
+
+# Close the connection
+connection.close()
+print("AMQP setup completed.")
+
+if __name__ == '__main__':
+    print("AMQP exchange and queues have been created.")

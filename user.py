@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-#!/usr/bin/env python3
-# The above shebang (#!) operator tells Unix-like environments
-# to run this file as a python3 script
-
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -30,6 +26,7 @@ class User(db.Model):
     name = db.Column(db.String(32), nullable=False)
     rating = db.Column(db.Integer, nullable=False)
     accnum = db.Column(db.String(64), nullable=False)
+    phone = db.Column(db.String(16), nullable=True)
 
     def json(self):
         dto = {
@@ -37,15 +34,9 @@ class User(db.Model):
             'name': self.name,
             'rating': self.rating,
             'accnum': self.accnum,
+            'phone': self.phone, 
         }
-
-        # dto['order_item'] = []
-        # for oi in self.order_item:
-        #     dto['order_item'].append(oi.json())
-
         return dto
-
-
 
 
 @app.route("/user", methods=['GET'])
@@ -67,6 +58,7 @@ def get_all():
             "message": "There are no users."
         }
     ), 404
+
 @app.route("/user/<string:uid>", methods=['GET'])
 def get_single_user(uid):
     user = db.session.scalar(db.select(User).filter_by(uid=uid))
@@ -85,6 +77,7 @@ def get_single_user(uid):
             "message": "There are no users."
         }
     ), 404
+
 @app.route("/user/getAccNumFromUser/<string:uid>", methods=['GET'])
 def get_single_user_Acc(uid):
     user = db.session.scalar(db.select(User).filter_by(uid=uid))
@@ -101,6 +94,25 @@ def get_single_user_Acc(uid):
         {
             "code": 404,
             "message": "There are no users."
+        }
+    ), 404
+
+@app.route("/user/getPhoneFromUser/<string:uid>", methods=['GET'])
+def get_single_user_phone(uid):
+    user = db.session.scalar(db.select(User).filter_by(uid=uid))
+    if user:
+        return jsonify(
+            {
+                "code": 200,
+                "data": {
+                    "phone": user.json()["phone"]
+                }
+            }
+        )
+    return jsonify(
+        {
+            "code": 404,
+            "message": "User not found."
         }
     ), 404
 
