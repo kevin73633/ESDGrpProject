@@ -66,8 +66,22 @@ def get_products():
 
 @app.route('/products/<int:productid>', methods=['GET'])
 def get_product(productid):
-    product = Product.query.get_or_404(productid)
-    return jsonify(product.to_dict())
+    product = db.session.scalar(db.select(Product).filter_by(productid=productid))
+    if product:
+        return jsonify(
+            {
+                "code": 200,
+                "data": {
+                    "product": product.json()
+                }
+            }
+        )
+    return jsonify(
+        {
+            "code": 404,
+            "message": "There is no product."
+        }
+    ), 404
 
 @app.route('/products', methods=['POST'])
 def create_product():
@@ -132,7 +146,7 @@ def get_user_products(userid):
             {
                 "code": 200,
                 "data": {
-                    "user": [product.json()]
+                    "product": product.json()
                 }
             }
         )

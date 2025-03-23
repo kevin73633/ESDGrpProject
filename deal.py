@@ -69,22 +69,22 @@ def get_all():
             "message": "There are no deals."
         }
     ), 404
-@app.route("/deal/<string:uid>", methods=['GET'])
-def get_single_deal(uid):
-    deal = db.session.scalar(db.select(Deal).filter_by(uid=uid))
+@app.route("/deal/<string:dealid>", methods=['GET'])
+def get_single_deal(dealid):
+    deal = db.session.scalar(db.select(Deal).filter_by(dealid=dealid))
     if deal:
         return jsonify(
             {
                 "code": 200,
                 "data": {
-                    "deal": [deal.json()]
+                    "deal": deal.json()
                 }
             }
         )
     return jsonify(
         {
             "code": 404,
-            "message": "There are no deals."
+            "message": "There is no deal."
         }
     ), 404
 

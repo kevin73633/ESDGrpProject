@@ -93,7 +93,7 @@ def get_single_user_Acc(uid):
             {
                 "code": 200,
                 "data": {
-                    "AccNum": [user.json()["accnum"]]
+                    "AccNum": user.json()["accnum"]
                 }
             }
         )

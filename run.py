@@ -2,7 +2,7 @@ import subprocess
 import time
 
 # List of Flask scripts to run in order
-scripts = ["product.py", "user.py", "payment.py", "confirm_deal.py"]
+scripts = ["deal.py", "product.py", "user.py", "payment.py", "account.py", "paymentrecord.py", "confirm_deal.py"]
 
 processes = []
 

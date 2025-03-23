@@ -7,13 +7,15 @@ import sys, os
 import amqp_lib
 from invokes import invoke_http
 
+
 app = Flask(__name__)
 
 CORS(app)
 
+product_URL = "http://localhost:5005/products"
 user_URL = "http://localhost:5001/user"
 deal_URL = "http://localhost:5020/deal"
-payment_URL = "http://localhost:5031/deal"
+payment_URL = "http://localhost:5031/payment"
 
 # RabbitMQ
 rabbit_host = "localhost"
@@ -44,17 +46,33 @@ def connectAMQP():
 
 
 @app.route("/confirm_deal/<string:dealid>", methods=["POST"])
-def confirm_deal():
+def confirm_deal(dealid):
     # Simple check of input format and data of the request are JSON
     try:
         # Invoke the user microservice
+        result = ""
+
         print("  Invoking deal microservice...")
-        result = invoke_http(user_URL, method="GET")
-        print(f"  deal_result:{result}\n")
+        dealDetails = invoke_http(deal_URL + "/" + dealid, method="GET")['data']['deal']
+    
+        print("  Invoking product microservice...")
+        productDetails = invoke_http(product_URL + "/" + str(dealDetails['productid']), method="GET")['data']['product']
+    
+
 
         print("  Invoking user microservice...")
-        result = invoke_http(user_URL, method="GET")
-        print(f"  user_result:{result}\n")
+        buyerDetails = invoke_http(user_URL + "/getAccNumFromUser/" + dealDetails['buyerid'], method="GET")
+
+        accNum = buyerDetails['data']['AccNum']
+        price = productDetails['price']
+
+        print("  Invoking payment microservice...")
+        paymentDetails = invoke_http(payment_URL + "/escrow", "POST", json={'accnum': accNum,'amount': price})
+        
+        print(paymentDetails)
+        # print("  Invoking user microservice...")
+        # result = invoke_http(user_URL, method="GET")
+        # print(f"  user_result:{result}\n")
 
 
         #result = processGetAllUsers()
