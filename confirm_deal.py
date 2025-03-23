@@ -12,7 +12,8 @@ app = Flask(__name__)
 CORS(app)
 
 user_URL = "http://localhost:5001/user"
-shipping_record_URL = "http://localhost:5002/shipping_record"
+deal_URL = "http://localhost:5020/deal"
+payment_URL = "http://localhost:5020/deal"
 
 # RabbitMQ
 rabbit_host = "localhost"
@@ -42,14 +43,18 @@ def connectAMQP():
         exit(1) # terminate
 
 
-@app.route("/confirm_deal", methods=["POST"])
+@app.route("/confirm_deal/<string:dealid>", methods=["POST"])
 def confirm_deal():
     # Simple check of input format and data of the request are JSON
     try:
         # Invoke the user microservice
+        print("  Invoking deal microservice...")
+        result = invoke_http(user_URL, method="GET")
+        print(f"  deal_result:{result}\n")
+
         print("  Invoking user microservice...")
         result = invoke_http(user_URL, method="GET")
-        print(f"  shipping_result:{result}\n")
+        print(f"  user_result:{result}\n")
 
 
         #result = processGetAllUsers()

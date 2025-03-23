@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS `deal` (
   `dealid` varchar(64) NOT NULL,
   `buyerid` varchar(255) NOT NULL,
   `sellerid` varchar(255) NOT NULL,
-  `price` int(64) NOT NULL,
+  `productid` int(64) NOT NULL,
   `status` int(64) NOT NULL,
   PRIMARY KEY (`dealid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -73,8 +73,8 @@ CREATE TABLE IF NOT EXISTS `deal` (
 -- Dumping data for table `deal`
 --
 
-INSERT INTO `deal` (`dealid`, `buyerid`, `sellerid`, `price`, `status`) VALUES
-('11111111', '12345678', '22345678', 0, 0);
+INSERT INTO `deal` (`dealid`, `buyerid`, `sellerid`, `productid`, `status`) VALUES
+('11111111', '22345678', '12345678', 1, 0);
 COMMIT;
 --
 -- Table structure for table `account`
