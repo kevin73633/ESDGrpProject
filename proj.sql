@@ -52,7 +52,7 @@ INSERT INTO `user` (`uid`, `name`, `rating`, `accnum`) VALUES
 ('62345678', 'user6', 0, '6234123412341234'),
 ('72345678', 'user7', 0, '7234123412341234'),
 ('82345678', 'user8', 0, '8234123412341234');
-
+COMMIT;
 
 
 --
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS `deal` (
 
 INSERT INTO `deal` (`dealid`, `buyerid`, `sellerid`, `price`, `status`) VALUES
 ('11111111', '12345678', '22345678', 0, 0);
-
+COMMIT;
 --
 -- Table structure for table `account`
 --
@@ -178,7 +178,8 @@ CREATE TABLE IF NOT EXISTS `ReportLog` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
---Precia
+--
+-- Precia
 -- Table structure for table `Product`
 --
 
@@ -202,7 +203,7 @@ INSERT INTO `Product` (`productid`, `title`, `category`, `description`, `locatio
 (3, '50% Off Bluetooth Earbuds', 'electronics', 'I have a coupon for 50% off wireless earbuds at TechStore. Looking to share with someone.', 'East Mall', 25.00, DATE_SUB(NOW(), INTERVAL 2 DAY), NULL, '32345678'),
 (4, 'Buy 2 Get 1 Free Books', 'books', 'Bookstore promotion, buy 2 books and get 1 free. Lets pool together to maximize the deal.', 'Central Library', 30.00, DATE_SUB(NOW(), INTERVAL 3 DAY), NULL, '42345678'),
 (5, 'Movie Ticket 2-for-1 Special', 'entertainment', 'Cinema offering buy one get one free tickets for weekday showings. Looking for a movie buddy.', 'Westfield Mall', 12.50, DATE_SUB(NOW(), INTERVAL 4 DAY), DATE_ADD(NOW(), INTERVAL 14 DAY), '52345678');
-
+COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
