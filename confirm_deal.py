@@ -13,7 +13,7 @@ CORS(app)
 
 user_URL = "http://localhost:5001/user"
 deal_URL = "http://localhost:5020/deal"
-payment_URL = "http://localhost:5020/deal"
+payment_URL = "http://localhost:5031/deal"
 
 # RabbitMQ
 rabbit_host = "localhost"
