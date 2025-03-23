@@ -13,9 +13,9 @@ db = SQLAlchemy(app)
 
 # Product Model - Updated to match your SQL structure
 class Product(db.Model):
-    __tablename__ = 'Product'  # Match the exact table name from your SQL
+    __tablename__ = 'product'  # Match the exact table name from your SQL
     
-    dealid = db.Column(db.Integer, primary_key=True)
+    productid = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     category = db.Column(db.String(50), nullable=False)
     description = db.Column(db.Text, nullable=False)
@@ -25,31 +25,48 @@ class Product(db.Model):
     expires_at = db.Column(db.DateTime, nullable=True)
     userid = db.Column(db.String(64), nullable=False)
     
-    def __repr__(self):
-        return f'<Product {self.title}>'
-    
-    def to_dict(self):
-        return {
-            'dealid': self.dealid,
+    def json(self):
+        dto = {
+            'productid': self.productid,
             'title': self.title,
             'category': self.category,
             'description': self.description,
             'location': self.location,
             'price': self.price,
-            'userid': self.userid,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'expires_at': self.expires_at.isoformat() if self.expires_at else None
+            'expires_at': self.expires_at.isoformat() if self.expires_at else None,
+            'userid': self.userid
         }
+
+        # dto['order_item'] = []
+        # for oi in self.order_item:
+        #     dto['order_item'].append(oi.json())
+
+        return dto
 
 # Routes for Product CRUD operations
 @app.route('/products', methods=['GET'])
 def get_products():
-    products = Product.query.all()
-    return jsonify([product.to_dict() for product in products])
+    productlist = db.session.scalars(db.select(Product)).all()
+    if len(productlist):
+        return jsonify(
+            {
+                "code": 200,
+                "data": {
+                    "products": [product.json() for product in productlist]
+                }
+            }
+        )
+    return jsonify(
+        {
+            "code": 404,
+            "message": "There are no products."
+        }
+    ), 404
 
-@app.route('/products/<int:dealid>', methods=['GET'])
-def get_product(dealid):
-    product = Product.query.get_or_404(dealid)
+@app.route('/products/<int:productid>', methods=['GET'])
+def get_product(productid):
+    product = Product.query.get_or_404(productid)
     return jsonify(product.to_dict())
 
 @app.route('/products', methods=['POST'])
@@ -75,9 +92,9 @@ def create_product():
     
     return jsonify(new_product.to_dict()), 201
 
-@app.route('/products/<int:dealid>', methods=['PUT'])
-def update_product(dealid):
-    product = Product.query.get_or_404(dealid)
+@app.route('/products/<int:productid>', methods=['PUT'])
+def update_product(productid):
+    product = Product.query.get_or_404(productid)
     data = request.get_json()
     
     # Update fields if they exist in the request
@@ -98,19 +115,33 @@ def update_product(dealid):
     
     return jsonify(product.to_dict())
 
-@app.route('/products/<int:dealid>', methods=['DELETE'])
-def delete_product(dealid):
-    product = Product.query.get_or_404(dealid)
+@app.route('/products/<int:productid>', methods=['DELETE'])
+def delete_product(productid):
+    product = Product.query.get_or_404(productid)
     db.session.delete(product)
     db.session.commit()
     
-    return jsonify({'message': f'Product {dealid} deleted successfully'})
+    return jsonify({'message': f'Product {productid} deleted successfully'})
 
 # Route to get products by user
 @app.route('/users/<string:userid>/products', methods=['GET'])
 def get_user_products(userid):
-    products = Product.query.filter_by(userid=userid).all()
-    return jsonify([product.to_dict() for product in products])
+    product = db.session.scalar(db.select(Product).filter_by(userid=userid))
+    if product:
+        return jsonify(
+            {
+                "code": 200,
+                "data": {
+                    "user": [product.json()]
+                }
+            }
+        )
+    return jsonify(
+        {
+            "code": 404,
+            "message": "There is no product."
+        }
+    ), 404
 
 # Route to get products by category
 @app.route('/products/category/<string:category>', methods=['GET'])
