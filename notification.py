@@ -25,6 +25,10 @@ def send_sms(phone_number, message):
     """
     Send SMS to any phone number using Amazon SNS
     """
+    return { #remove when not in debug
+            "success": True,
+            "message_id": 1
+        }
     try:
         # Initialize SNS client
         sns_client = boto3.client('sns',
