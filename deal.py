@@ -63,7 +63,25 @@ def get_all():
             "message": "There are no deals."
         }
     ), 404
-    
+@app.route("/get_deals_with_user/<string:userid>", methods=['GET'])
+def get_deals_with_user(userid):
+    deallist = db.session.scalars(db.select(Deal).filter_by(sellerid=userid)).all()
+    print(deallist)
+    if len(deallist):
+        return jsonify(
+            {
+                "code": 200,
+                "data": {
+                    "deals": [deal.json() for deal in deallist]
+                }
+            }
+        )
+    return jsonify(
+        {
+            "code": 404,
+            "message": "There are no deals."
+        }
+    ), 404
 @app.route("/deal/<string:dealid>", methods=['GET'])
 def get_single_deal(dealid):
     deal = db.session.scalar(db.select(Deal).filter_by(dealid=dealid))

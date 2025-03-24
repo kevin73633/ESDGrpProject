@@ -281,66 +281,19 @@
 </template>
 
 <script>
+import axios from 'axios';
 export default {
   data() {
     return {
       users: [
-        { 
-          id: 1, 
-          name: "Name", 
-          message: "Supporting line text lorem ipsum dolor sit amet", 
-          time: "10 min", 
-          status: "bg-success" 
-        },
-        { 
-          id: 2, 
-          name: "Name", 
-          message: "Supporting line text lorem ipsum dolor sit amet", 
-          time: "10 min", 
-          status: "bg-success" 
-        },
-        { 
-          id: 3, 
-          name: "Name", 
-          message: "Supporting line text lorem ipsum dolor sit amet", 
-          time: "10 min", 
-          status: "bg-success" 
-        },
-        { 
-          id: 4, 
-          name: "Name", 
-          message: "Supporting line text lorem ipsum dolor sit amet", 
-          time: "10 min", 
-          status: "bg-success" 
-        },
-        { 
-          id: 5, 
-          name: "Name", 
-          message: "Supporting line text lorem ipsum dolor sit amet", 
-          time: "10 min", 
-          status: "bg-success" 
-        },
-        { 
-          id: 6, 
-          name: "Name", 
-          message: "Supporting line text lorem ipsum dolor sit amet", 
-          time: "10 min", 
-          status: "bg-success" 
-        },
-        { 
-          id: 7, 
-          name: "Name", 
-          message: "Supporting line text lorem ipsum dolor sit amet", 
-          time: "10 min", 
-          status: "bg-success" 
-        },
-        { 
-          id: 8, 
-          name: "Name", 
-          message: "Supporting line text lorem ipsum dolor sit amet", 
-          time: "10 min", 
-          status: "bg-success" 
-        }
+        // { 
+        //   id: 1, 
+        //   name: "Name", 
+        //   message: "Supporting line text lorem ipsum dolor sit amet", 
+        //   time: "10 min", 
+        //   status: "bg-success" 
+        // },
+        
       ],
       messages: [
         { id: 1, text: "that looks so good!", sent: false, time: "10:25 AM" },
@@ -510,6 +463,16 @@ export default {
         chatContent.scrollTop = chatContent.scrollHeight;
       }
     },
+    initializeChats()
+    {
+      axios.get("http://127.0.0.1:5020/get_deals_with_user/12345678")
+      .then((response) => {
+        var deals = response['data']['data']['deals'];
+        console.log(deals.length);
+      }, (error) => {
+        console.log(error);
+      });
+    },
     // This method will be implemented later to fetch deal details from your API
     async fetchDealDetails(dealId) {
       try {
@@ -525,6 +488,7 @@ export default {
   mounted() {
     // Scroll to bottom of chat on load
     this.scrollToBottom();
+    this.initializeChats();
   },
   updated() {
     // Scroll to bottom of chat when messages update
