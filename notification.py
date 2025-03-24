@@ -139,4 +139,4 @@ if __name__ == '__main__':
     consumer_thread.start()
     
     print("This is flask for " + os.path.basename(__file__) + ": notification service ...")
-    app.run(host='0.0.0.0', port=5050, debug=True)
+    app.run(host='0.0.0.0', port=5075, debug=True)
