@@ -3,6 +3,7 @@
 # The above shebang (#!) operator tells Unix-like environments
 # to run this file as a python3 script
 
+#!/usr/bin/env python3
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -40,14 +41,7 @@ class Deal(db.Model):
             'productid': self.productid,
             'status': self.status,
         }
-
-        # dto['order_item'] = []
-        # for oi in self.order_item:
-        #     dto['order_item'].append(oi.json())
-
         return dto
-
-
 
 
 @app.route("/deal", methods=['GET'])
@@ -69,6 +63,7 @@ def get_all():
             "message": "There are no deals."
         }
     ), 404
+    
 @app.route("/deal/<string:dealid>", methods=['GET'])
 def get_single_deal(dealid):
     deal = db.session.scalar(db.select(Deal).filter_by(dealid=dealid))
@@ -87,6 +82,49 @@ def get_single_deal(dealid):
             "message": "There is no deal."
         }
     ), 404
+
+# New endpoint to update deal status
+@app.route("/deal/<string:dealid>/status", methods=['PUT'])
+def update_deal_status(dealid):
+    deal = db.session.scalar(db.select(Deal).filter_by(dealid=dealid))
+    
+    if not deal:
+        return jsonify(
+            {
+                "code": 404,
+                "message": "Deal not found."
+            }
+        ), 404
+    
+    data = request.get_json()
+    if 'status' not in data:
+        return jsonify(
+            {
+                "code": 400,
+                "message": "Status is required."
+            }
+        ), 400
+    
+    try:
+        old_status = deal.status
+        deal.status = data['status']
+        db.session.commit()
+        
+        return jsonify(
+            {
+                "code": 200,
+                "data": deal.json(),
+                "message": "Deal status updated successfully."
+            }
+        )
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(
+            {
+                "code": 500,
+                "message": f"An error occurred updating the deal status. {str(e)}"
+            }
+        ), 500
 
 if __name__ == '__main__':
     print("This is flask for " + os.path.basename(__file__) + ": deals ...")
