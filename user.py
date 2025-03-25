@@ -9,15 +9,16 @@ import os
 app = Flask(__name__)
 
 # Update to include supports_credentials
-CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
+CORS(app, 
+     origins=["http://localhost:8080"],  # Your Vue.js frontend URL
+     supports_credentials=True,
+     resources={r"/*": {"origins": "http://localhost:8080"}})
 
 # Session configuration
 app.config['SECRET_KEY'] = 'your-secret-key-here'  # Use a strong secret key
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Or 'None' with secure=True in production
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)  # Session lasts for 1 day
-
-CORS(app)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = (
      environ.get("dbURL") or "mysql+mysqlconnector://root:root@localhost:3306/Project"
