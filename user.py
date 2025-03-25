@@ -21,7 +21,7 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)  # Session lasts for 1 day
 
 app.config["SQLALCHEMY_DATABASE_URI"] = (
-     environ.get("dbURL") or "mysql+mysqlconnector://root:root@localhost:3306/Project"
+     environ.get("dbURL") or "mysql+mysqlconnector://root@localhost:3306/Project"
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_recycle': 299}
@@ -78,17 +78,6 @@ def login():
         "code": 401,
         "message": "Invalid user ID"
     }), 401
-
-# Logout route
-@app.route("/logout", methods=['POST'])
-def logout():
-    # Clear the session
-    session.clear()
-    return jsonify({
-        "code": 200,
-        "message": "Logout successful"
-    })
-
 
 # Check authentication status
 @app.route("/check-auth", methods=['GET'])
@@ -224,6 +213,31 @@ def get_single_user_phone(uid):
             "message": "User not found."
         }
     ), 404
+  
+# logout  
+@app.route("/logout", methods=['POST'])
+def logout():
+    try:
+        # Clear the session
+        session.clear()
+        
+        # Return success response
+        return jsonify({
+            "code": 200,
+            "message": "Successfully logged out"
+        }), 200
+        
+    except Exception as e:
+        # Log the error
+        print(f"Error during logout: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # Return error response
+        return jsonify({
+            "code": 500,
+            "message": f"An error occurred during logout: {str(e)}"
+        }), 500
 
 # @app.route("/order/<string:order_id>")
 # def find_by_order_id(uid):

@@ -18,26 +18,49 @@
             
             <!-- Conversations list -->
             <div class="overflow-auto flex-grow-1">
-              <ul class="list-unstyled mb-0">
-                <li v-for="user in users" :key="user.id" class="p-3 border-bottom position-relative">
-                  <a href="#" class="d-flex text-decoration-none text-dark">
+              <div v-if="isLoading" class="text-center p-4">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading conversations...</p>
+              </div>
+              
+              <div v-else-if="apiError" class="alert alert-danger m-3">
+                {{ apiError }}
+                <button @click="initializeChats" class="btn btn-outline-danger btn-sm mt-2">Retry</button>
+              </div>
+              
+              <div v-else-if="chatUsers.length === 0" class="text-center p-4">
+                <p class="text-muted">No conversations yet</p>
+              </div>
+              
+              <ul v-else class="list-unstyled mb-0">
+                <li 
+                  v-for="user in chatUsers" 
+                  :key="user.uid" 
+                  class="p-3 border-bottom position-relative"
+                  :class="{'bg-light': user.active}"
+                  @click="selectChat(user.uid)"
+                  style="cursor: pointer;"
+                >
+                  <div class="d-flex text-decoration-none text-dark">
                     <div class="position-relative me-3">
                       <div class="bg-secondary rounded-circle" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
                         <span class="text-white">{{ user.name.charAt(0) }}</span>
                       </div>
-                      <span v-if="user.status" class="position-absolute bottom-0 end-0 badge rounded-pill" :class="user.status"></span>
+                      <span v-if="user.online" class="position-absolute bottom-0 end-0 badge rounded-pill bg-success"></span>
                     </div>
                     <div class="flex-grow-1">
                       <div class="d-flex justify-content-between">
                         <p class="fw-bold mb-0">{{ user.name }}</p>
-                        <p class="small text-muted">{{ user.time }}</p>
+                        <p class="small text-muted">{{ user.lastMessageTime || '' }}</p>
                       </div>
-                      <p class="small text-muted text-truncate mb-0" style="max-width: 160px;">{{ user.message }}</p>
+                      <p class="small text-muted text-truncate mb-0" style="max-width: 160px;">{{ user.lastMessage || 'No messages yet' }}</p>
                     </div>
-                  </a>
+                  </div>
                 </li>
               </ul>
-            </div>
+            </div>  
           </div>
         </div>
         
@@ -51,14 +74,14 @@
                   <img src="/api/placeholder/40/40" alt="avatar" class="rounded-circle" width="40">
                 </div>
                 <div>
-                  <p class="fw-bold mb-0">Name</p>
+                  <p class="fw-bold mb-0">{{ selectedChatUser ? selectedChatUser.name : 'No chat selected' }}</p>
                 </div>
               </div>
               <div>
                 <button class="btn btn-sm btn-light me-2">
                   <i class="fas fa-bell"></i>
                 </button>
-                <button class="btn btn-sm btn-light">
+                <button class="btn btn-sm btn-light" @click="goToProfile">
                   <i class="fas fa-cog"></i>
                 </button>
               </div>
@@ -66,7 +89,7 @@
           </div>
           
           <!-- Chat content area (scrollable) -->
-          <div class="flex-grow-1 overflow-auto p-3" id="chat-content">
+          <div ref="chatContent" class="flex-grow-1 overflow-auto p-3" id="chat-content">
             <!-- Deal Confirmation Banner (when confirmed) -->
             <div v-if="dealConfirmed" class="alert alert-success mb-3 d-flex align-items-center">
               <i class="fas fa-check-circle me-2 fs-5"></i>
@@ -79,16 +102,16 @@
               </div>
             </div>
           
-            <!-- Deal card -->
-            <div class="card mb-3">
+            <!-- Deal card (if applicable) -->
+            <div class="card mb-3" v-if="dealDetails.id">
               <div class="card-body position-relative">
                 <div class="d-flex align-items-center mb-3">
                   <div class="bg-light rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                    <span>A</span>
+                    <span>{{ dealDetails.name ? dealDetails.name.charAt(0) : 'D' }}</span>
                   </div>
                   <div>
-                    <p class="mb-0">&lt;Deal name&gt;</p>
-                    <p class="text-muted small mb-0">&lt;Date&gt;</p>
+                    <p class="mb-0">{{ dealDetails.name || '<Deal name>' }}</p>
+                    <p class="text-muted small mb-0">{{ dealDetails.date || '<Date>' }}</p>
                   </div>
                   <div class="position-absolute top-0 end-0 m-3">
                     <button @click="showReportDialog" class="btn btn-outline-secondary btn-sm">Report</button>
@@ -103,19 +126,19 @@
                       </div>
                     </div>
                     <div class="flex-grow-1">
-                      <p class="mb-0">Title</p>
-                      <p class="text-muted small mb-0">Description</p>
+                      <p class="mb-0">{{ dealDetails.description ? dealDetails.description.split(' ').slice(0, 3).join(' ') : 'Title' }}</p>
+                      <p class="text-muted small mb-0">{{ dealDetails.description || 'Description' }}</p>
                     </div>
                     <div class="text-muted small">
-                      9:41 AM
+                      {{ dealDetails.date ? formatShortTime(dealDetails.date) : '' }}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
             
-            <!-- Confirm/Verify Deal Button -->
-            <div class="mb-4">
+            <!-- Confirm/Verify Deal Button (if applicable) -->
+            <div class="mb-4" v-if="dealDetails.id">
               <button 
                 @click="dealConfirmed ? verifyDeal() : showDealConfirmation()" 
                 class="btn" 
@@ -127,13 +150,13 @@
             </div>
             
             <!-- Chat bubbles -->
-            <div v-for="(message, index) in messages" :key="message.id" class="mb-3">
-              <!-- Sent messages (by user) -->
-              <div v-if="message.sent" class="d-flex justify-content-end">
+            <div v-for="(message, index) in messages" :key="message.messageid" class="mb-3">
+              <!-- Sent messages (by current user) -->
+              <div v-if="message.senderid === currentUserId" class="d-flex justify-content-end">
                 <div class="bg-primary p-3 rounded-3 text-white" style="max-width: 80%;">
-                  <p class="mb-0">{{ message.text }}</p>
+                  <p class="mb-0">{{ message.message }}</p>
                   <p class="text-end mb-0 mt-1">
-                    <small class="opacity-75">{{ message.time || 'now' }}</small>
+                    <small class="opacity-75">{{ formatMessageTime(message.sentat) }}</small>
                   </p>
                 </div>
               </div>
@@ -141,12 +164,12 @@
               <!-- Received messages -->
               <div v-else class="d-flex">
                 <div class="bg-light rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; min-width: 40px;">
-                  <span>A</span>
+                  <span>{{ selectedChatUser ? selectedChatUser.name.charAt(0) : 'A' }}</span>
                 </div>
                 <div class="bg-light p-3 rounded-3" style="max-width: 80%;">
-                  <p class="mb-0">{{ message.text }}</p>
+                  <p class="mb-0">{{ message.message }}</p>
                   <p class="mb-0 mt-1">
-                    <small class="text-muted">{{ message.time || 'now' }}</small>
+                    <small class="text-muted">{{ formatMessageTime(message.sentat) }}</small>
                   </p>
                 </div>
               </div>
@@ -154,9 +177,9 @@
             
             <!-- Quick responses -->
             <div class="d-flex justify-content-end flex-wrap gap-2 mb-4">
-              <button @click="sendQuickReply('Let\'s do it')" class="btn btn-light rounded-pill">Let's do it</button>
-              <button @click="sendQuickReply('Great!')" class="btn btn-light rounded-pill">Great!</button>
-              <button @click="sendQuickReply('Sounds good')" class="btn btn-light rounded-pill">Sounds good</button>
+              <button v-for="(reply, index) in quickReplies" :key="index" @click="sendQuickReply(reply)" class="btn btn-light rounded-pill">
+                {{ reply }}
+              </button>
             </div>
           </div>
           
@@ -210,7 +233,7 @@
                 <div class="mb-2">
                   <strong>Date:</strong> {{ dealDetails.date }}
                 </div>
-                <div class="mb-2">
+                <div class="mb-2" v-if="dealDetails.amount !== undefined">
                   <strong>Amount:</strong> ${{ dealDetails.amount.toFixed(2) }}
                 </div>
                 <div class="mb-2">
@@ -219,7 +242,7 @@
                 <div class="mb-2">
                   <strong>Description:</strong> {{ dealDetails.description }}
                 </div>
-                <div class="mb-2">
+                <div class="mb-2" v-if="dealDetails.parties && dealDetails.parties.length">
                   <strong>Parties:</strong> {{ dealDetails.parties.join(', ') }}
                 </div>
               </div>
@@ -282,55 +305,250 @@
 
 <script>
 import axios from 'axios';
+
+// API configuration
+const AUTH_API_URL = 'http://localhost:5001'; // Auth API URL (matches your Flask user.py)
+const CHAT_API_URL = 'http://localhost:5040'; // Chat API URL (matches your Flask chat.py)
+
 export default {
+  name: 'ChatComponent',
   data() {
     return {
-      users: [
-        // { 
-        //   id: 1, 
-        //   name: "Name", 
-        //   message: "Supporting line text lorem ipsum dolor sit amet", 
-        //   time: "10 min", 
-        //   status: "bg-success" 
-        // },
-        
-      ],
-      messages: [
-        { id: 1, text: "that looks so good!", sent: false, time: "10:25 AM" },
-        { id: 2, text: "or we could make this?", sent: true, time: "10:26 AM" }
-      ],
+      isLoading: false,
+      isChatLoading: false,
+      apiError: null,
+      
+      // User data
+      currentUserId: '',
+      currentUserName: '',
+      selectedChatUserId: null,
+      selectedChatUser: null,
+      chatUsers: [],
+      
+      // Messages
+      messages: [],
       newMessage: "",
       validationError: "",
+      
+      // UI state
       showConfirmationModal: false,
       showReportModal: false,
       dealConfirmed: false,
-      // Hardcoded deal details (replace with API call later)
+      
+      // Quick replies list for easier maintenance
+      quickReplies: ["Let's do it", "Great!", "Sounds good"],
+      
+      // Deal details - if you're using deal functionality
       dealDetails: {
-        id: "DEAL-2025-03-042",
-        name: "Homemade Dumplings Partnership",
-        date: "March 20, 2025",
-        amount: 2500.00,
-        status: "Pending Confirmation",
-        description: "Partnership agreement for distribution of homemade dumplings",
-        parties: ["Dumpling Co.", "Food Distributors Inc."]
+        id: "",
+        name: "",
+        date: "",
+        amount: 0,
+        status: "",
+        description: "",
+        parties: []
       },
+      
+      // Report data
       reportData: {
         type: "",
         description: ""
       }
     };
   },
+  mounted() {
+    // Check auth and initialize chats only when authenticated
+    this.isLoading = true;
+    this.checkAuth().then(isAuthenticated => {
+      if (isAuthenticated) {
+        // Only initialize data if authenticated
+        this.initializeChats();
+      } else {
+        // If not authenticated, router guard should have redirected to login already
+        console.log("Not authenticated, should redirect to login");
+      }
+    }).finally(() => {
+      this.isLoading = false;
+    });
+  },
   methods: {
+    // Navigation methods
     goBack() {
-      // Try to use browser back if possible
-      if (window.history.length > 1) {
+      if (window.history && window.history.length > 1) {
         this.$router.go(-1);
       } else {
-        // Fallback to home route if there's no history
-        this.$router.push({ name: 'home' });
+        this.$router.push({ name: 'Home' });
       }
     },
-    sendMessage() {
+    
+    goToProfile() {
+      this.$router.push({ name: 'Profile' });
+    },
+    
+    // Authentication methods
+      async checkAuth() {
+      try {
+        const response = await axios.get(`${AUTH_API_URL}/check-auth`, { 
+          withCredentials: true 
+        });
+        
+        if (response.data.code === 200 && response.data.data.authenticated) {
+          this.currentUserId = response.data.data.uid;
+          this.currentUserName = response.data.data.name;
+          return true;
+        } else {
+          // Not authenticated, redirect to login
+          console.log("Auth check failed in component - redirecting to login");
+          this.$router.push('/login');
+          return false;
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        this.$router.push('/login');
+        return false;
+      }
+    },
+    
+    // Add this method to initialize chat data
+    async initializeChats() {
+      try {
+        // Load users list
+        await this.loadUsers();
+      } catch (error) {
+        console.error("Failed to initialize chats:", error);
+        this.apiError = "Failed to load chat data. Please try again.";
+      }
+    },
+    
+    // Load users for chat sidebar
+    async loadUsers() {
+      try {
+        this.isLoading = true;
+        this.apiError = null;
+        
+        // Get all users from the user API
+        const response = await axios.get(`${AUTH_API_URL}/user`, { 
+          withCredentials: true 
+        });
+        
+        if (response.data.code === 200) {
+          // Filter out the current user
+          const users = response.data.data.users.filter(user => user.uid !== this.currentUserId);
+          
+          // Transform to format needed for chat
+          this.chatUsers = users.map(user => ({
+            uid: user.uid,
+            name: user.name,
+            online: false, // You could implement online status if needed
+            active: false,
+            lastMessage: '',
+            lastMessageTime: '',
+            rating: user.rating
+          }));
+          
+          // If we have users, select the first one
+          if (this.chatUsers.length > 0) {
+            this.selectChat(this.chatUsers[0].uid);
+          }
+        } else {
+          console.error("Error loading users:", response.data ? response.data.message : "Unknown error");
+          this.apiError = "Failed to load users list.";
+        }
+      } catch (error) {
+        console.error("Error loading users:", error);
+        this.apiError = "Failed to load users. Please try again later.";
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    
+    // Select a chat
+    selectChat(userId) {
+      if (!userId) return;
+      
+      // Update the selected user
+      this.selectedChatUserId = userId;
+      
+      // Find the user in our list
+      const selectedUser = this.chatUsers.find(user => user.uid === userId);
+      if (selectedUser) {
+        this.selectedChatUser = selectedUser;
+        
+        // Update UI to show selected chat
+        this.chatUsers.forEach(user => {
+          user.active = user.uid === userId;
+        });
+        
+        // Load chat messages for this user
+        this.loadChatMessages(userId);
+      }
+    },
+    
+    // Load chat messages between current user and selected user
+    async loadChatMessages(receiverId) {
+      if (!this.currentUserId || !receiverId) return;
+      
+      try {
+        this.isChatLoading = true;
+        this.messages = []; // Clear previous messages
+        let allMessages = [];
+        
+        try {
+          // Get messages sent from current user to receiver
+          const sentResponse = await axios.get(`${CHAT_API_URL}/chat/getmessagebetween/${this.currentUserId}/${receiverId}`);
+          if (sentResponse.data.code === 200) {
+            allMessages = [...sentResponse.data.data.messages];
+          }
+        } catch (error) {
+          // Ignore 404 errors (no messages found)
+          if (error.response && error.response.status !== 404) {
+            throw error;
+          }
+        }
+        
+        try {
+          // Get messages sent from receiver to current user
+          const receivedResponse = await axios.get(`${CHAT_API_URL}/chat/getmessagebetween/${receiverId}/${this.currentUserId}`);
+          if (receivedResponse.data.code === 200) {
+            allMessages = [...allMessages, ...receivedResponse.data.data.messages];
+          }
+        } catch (error) {
+          // Ignore 404 errors (no messages found)
+          if (error.response && error.response.status !== 404) {
+            throw error;
+          }
+        }
+        
+        if (allMessages.length > 0) {
+          // Sort messages by timestamp
+          this.messages = allMessages.sort((a, b) => {
+            const dateA = new Date(a.sentat);
+            const dateB = new Date(b.sentat);
+            return dateA - dateB;
+          });
+          
+          // Update last message in the sidebar
+          const lastMsg = this.messages[this.messages.length - 1];
+          const user = this.chatUsers.find(u => u.uid === receiverId);
+          if (user) {
+            user.lastMessage = lastMsg.message;
+            user.lastMessageTime = this.formatTimeAgo(lastMsg.sentat);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading chat messages:", error);
+        this.apiError = "Failed to load messages. Please try again.";
+      } finally {
+        this.isChatLoading = false;
+        // Scroll to bottom after messages are loaded
+        this.$nextTick(() => {
+          this.scrollToBottom();
+        });
+      }
+    },
+    
+    // Send message methods
+    async sendMessage() {
       // Validate message content
       if (!this.newMessage.trim()) {
         this.validationError = "Please enter a message";
@@ -340,114 +558,80 @@ export default {
       // Clear validation error
       this.validationError = "";
       
-      // Create a new message
-      const newMsg = {
-        id: Date.now(),
-        text: this.newMessage,
-        sent: true,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      
-      // Add to messages array
-      this.messages.push(newMsg);
-      
-      // Clear input
-      this.newMessage = "";
-      
-      // Simulate reply after a short delay (remove this in production)
-      if (Math.random() > 0.5) {
-        setTimeout(() => {
-          const replyMsg = {
-            id: Date.now(),
-            text: "Thanks for your message!",
-            sent: false,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          };
-          this.messages.push(replyMsg);
-        }, 1000);
+      try {
+        // Create timestamp for the message
+        const timestamp = new Date().toISOString();
+        
+        // Send message to the server
+        const response = await axios.post(`${CHAT_API_URL}/chat/send`, {
+          senderid: this.currentUserId,
+          receiverid: this.selectedChatUserId,
+          message: this.newMessage,
+          sentat: timestamp
+        }, { withCredentials: true });
+        
+        if (response.data.code === 201) {
+          // Add the new message to the chat
+          this.messages.push(response.data.data.message);
+          
+          // Update last message in the sidebar
+          const user = this.chatUsers.find(u => u.uid === this.selectedChatUserId);
+          if (user) {
+            user.lastMessage = this.newMessage;
+            user.lastMessageTime = 'Just now';
+          }
+          
+          // Clear input
+          this.newMessage = "";
+          
+          // Scroll to bottom
+          this.scrollToBottom();
+        } else {
+          this.validationError = "Failed to send message. Please try again.";
+        }
+      } catch (error) {
+        console.error("Error sending message:", error);
+        this.validationError = "Failed to send message. Please try again.";
       }
     },
+    
     sendQuickReply(text) {
-      const quickReply = {
-        id: Date.now(),
-        text: text,
-        sent: true,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      
-      this.messages.push(quickReply);
-      
-      // Simulate response
-      setTimeout(() => {
-        const response = {
-          id: Date.now(),
-          text: "Great! I'll update our records.",
-          sent: false,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        this.messages.push(response);
-      }, 800);
+      // Set the text in the input field
+      this.newMessage = text;
+      // Send the message
+      this.sendMessage();
     },
+    
+    // UI helper methods
+    scrollToBottom() {
+      this.$nextTick(() => {
+        if (this.$refs.chatContent) {
+          this.$refs.chatContent.scrollTop = this.$refs.chatContent.scrollHeight;
+        }
+      });
+    },
+    
+    // Deal methods (if needed)
     showDealConfirmation() {
-      // In a real app, you would fetch the latest deal details here
-      // this.fetchDealDetails(dealId);
-      
-      // For demo, we'll just show the modal with hardcoded data
       this.showConfirmationModal = true;
     },
+    
     closeModal() {
       this.showConfirmationModal = false;
     },
+    
     confirmDeal() {
-      // In a real app, send confirmation to your API
-      // const response = await this.api.confirmDeal(this.dealDetails.id);
-      
-      // For demo, we'll simulate a successful confirmation
+      // Implement your deal confirmation logic here
       this.dealDetails.status = "Confirmed";
       this.dealConfirmed = true;
-      
-      // Close the modal
       this.showConfirmationModal = false;
-      
-      // Scroll to top to show the confirmation banner
-      const chatContent = document.getElementById('chat-content');
-      if (chatContent) {
-        chatContent.scrollTop = 0;
-      }
     },
+    
     verifyDeal() {
-      // In a real app, this would involve backend logic
-      // Here we just show a notification
-      alert("Deal verification submitted. This would typically involve additional verification steps in a real app.");
-      
-      // You could add a verified status in a real implementation
-      // this.dealVerified = true;
+      alert("Deal verification submitted!");
     },
-    showReportDialog() {
-      this.showReportModal = true;
-      this.reportData = {
-        type: "",
-        description: ""
-      };
-    },
-    submitReport() {
-      // Validate report data
-      if (!this.reportData.type || !this.reportData.description.trim()) {
-        alert("Please fill in all report fields");
-        return;
-      }
-      
-      // In a real app, send report to your API
-      // const response = await this.api.submitReport(this.dealDetails.id, this.reportData);
-      
-      // Close the modal
-      this.showReportModal = false;
-      
-      // Show confirmation message
-      alert("Your report has been submitted. Our team will review it shortly.");
-    },
+    
     getStatusBadgeClass() {
-      // Return appropriate badge class based on status
       const statusMap = {
         "Confirmed": "bg-success",
         "Pending Confirmation": "bg-warning",
@@ -457,54 +641,78 @@ export default {
       
       return statusMap[this.dealDetails.status] || "bg-primary";
     },
-    scrollToBottom() {
-      const chatContent = document.getElementById('chat-content');
-      if (chatContent) {
-        chatContent.scrollTop = chatContent.scrollHeight;
+    
+    // Report handling methods
+    showReportDialog() {
+      this.showReportModal = true;
+      this.reportData = {
+        type: "",
+        description: ""
+      };
+    },
+    
+    submitReport() {
+      if (!this.reportData.type || !this.reportData.description.trim()) {
+        alert("Please fill in all report fields");
+        return;
       }
+      
+      // Implement your report submission logic here
+      this.showReportModal = false;
+      alert("Your report has been submitted. Our team will review it shortly.");
     },
-    initializeChats()
-    {
-      axios.get("http://127.0.0.1:5020/get_deals_with_user/12345678")
-      .then((response) => {
-        var deals = response['data']['data']['deals'];
-        console.log(deals.length);
-      }, (error) => {
-        console.log(error);
-      });
-    },
-    // This method will be implemented later to fetch deal details from your API
-    async fetchDealDetails(dealId) {
+    
+    // Utility methods
+    formatMessageTime(timestamp) {
+      if (!timestamp) return '';
       try {
-        // Replace with actual API call
-        // const response = await fetch(`/api/deals/${dealId}`);
-        // this.dealDetails = await response.json();
-        console.log("Would fetch details for deal ID:", dealId);
-      } catch (error) {
-        console.error("Error fetching deal details:", error);
+        const date = new Date(timestamp);
+        if (isNaN(date.getTime())) return ''; // Invalid date
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } catch (e) {
+        console.error('Error formatting message time:', e);
+        return '';
       }
-    }
-  },
-  mounted() {
-    // Scroll to bottom of chat on load
-    this.scrollToBottom();
-    this.initializeChats();
-  },
-  updated() {
-    // Scroll to bottom of chat when messages update
-    this.scrollToBottom();
-  },
-  created() {
-    // Add bottom padding for mobile screens
-    if (window.innerWidth <= 768) {
-      document.documentElement.style.setProperty('--safe-bottom-padding', '20px');
-    }
-  },
-  watch: {
-    // Clear validation error when user starts typing
-    newMessage(val) {
-      if (val && this.validationError) {
-        this.validationError = "";
+    },
+    
+    formatShortTime(dateString) {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return ''; // Invalid date
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } catch (e) {
+        console.error('Error formatting short time:', e);
+        return '';
+      }
+    },
+     
+    formatTimeAgo(timestamp) {
+      if (!timestamp) return '';
+      
+      try {
+        const date = new Date(timestamp);
+        if (isNaN(date.getTime())) return '';
+        
+        const now = new Date();
+        const diffMs = now - date;
+        const diffSec = Math.floor(diffMs / 1000);
+        
+        if (diffSec < 60) return 'Just now';
+        
+        const diffMin = Math.floor(diffSec / 60);
+        if (diffMin < 60) return `${diffMin}m ago`;
+        
+        const diffHour = Math.floor(diffMin / 60);
+        if (diffHour < 24) return `${diffHour}h ago`;
+        
+        const diffDay = Math.floor(diffHour / 24);
+        if (diffDay < 7) return `${diffDay}d ago`;
+        
+        return date.toLocaleDateString();
+      } catch (e) {
+        console.error('Error calculating time ago:', e);
+        return '';
       }
     }
   }

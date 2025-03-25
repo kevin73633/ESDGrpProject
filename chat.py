@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-#!/usr/bin/env python3
 # The above shebang (#!) operator tells Unix-like environments
 # to run this file as a python3 script
 
@@ -9,10 +8,15 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from os import environ
 import os
+import uuid
 
 app = Flask(__name__)
 
-CORS(app)
+CORS(app,
+     origins=["http://localhost:8080"],  # Your Vue.js frontend URL
+     supports_credentials=True,
+     methods=["GET", "POST", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization"])
 
 app.config["SQLALCHEMY_DATABASE_URI"] = (
      environ.get("dbURL") or "mysql+mysqlconnector://root@localhost:3306/Project"
@@ -45,8 +49,6 @@ class Chat(db.Model):
         #     dto['order_item'].append(oi.json())
 
         return dto
-
-
 
 
 @app.route("/chat", methods=['GET'])
@@ -88,7 +90,88 @@ def getChatBetween(senderid, receiverid):
             "message": "There are no messages."
         }
     ), 404
-
+    
+@app.route("/chat/send", methods=['POST'])
+def send_message():
+    try:
+        data = request.get_json()
+        print("Received data:", data)  # Debug: log received data
+        
+        # Check required fields
+        required_fields = ['senderid', 'receiverid', 'message']
+        for field in required_fields:
+            if field not in data:
+                print(f"Missing field: {field}")  # Debug
+                return jsonify({
+                    "code": 400,
+                    "message": f"Missing required field: {field}"
+                }), 400
+        
+        # Generate a unique message ID
+        message_id = str(uuid.uuid4())
+        
+        # Format the datetime properly for MySQL
+        if 'sentat' in data:
+            try:
+                # Parse the ISO format with Z
+                if data['sentat'].endswith('Z'):
+                    dt = datetime.fromisoformat(data['sentat'].replace('Z', '+00:00'))
+                else:
+                    dt = datetime.fromisoformat(data['sentat'])
+                # Format to MySQL compatible format
+                sent_at = dt.strftime('%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                # If parsing fails, use current time
+                sent_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            # Get current timestamp if not provided
+            sent_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        print(f"Creating message with ID: {message_id}")  # Debug
+        
+        # Store message data in a dictionary before creating the database object
+        message_data = {
+            "messageid": message_id,
+            "senderid": data['senderid'],
+            "receiverid": data['receiverid'],
+            "message": data['message'],
+            "sentat": sent_at
+        }
+        
+        # Create new message from the dictionary
+        new_message = Chat(**message_data)
+        
+        # Save to database
+        try:
+            db.session.add(new_message)
+            db.session.commit()
+            print("Message saved successfully")  # Debug
+        except Exception as db_error:
+            db.session.rollback()
+            print(f"Database error: {str(db_error)}")  # Debug
+            raise db_error
+        
+        # Return success response with the message data (not the SQLAlchemy object)
+        return jsonify({
+            "code": 201,
+            "data": {
+                "message": message_data
+            },
+            "message": "Message sent successfully."
+        }), 201
+        
+    except Exception as e:
+        # Log the error
+        print(f"Error sending message: {str(e)}")
+        import traceback
+        traceback.print_exc()  # Print full stack trace
+        
+        # Return error response
+        return jsonify({
+            "code": 500,
+            "message": f"An error occurred while sending the message: {str(e)}"
+        }), 500
+              
 if __name__ == '__main__':
     print("This is flask for " + os.path.basename(__file__) + ": chats ...")
     app.run(host='0.0.0.0', port=5040, debug=True)
