@@ -21,7 +21,7 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)  # Session lasts for 1 day
 
 app.config["SQLALCHEMY_DATABASE_URI"] = (
-     environ.get("dbURL") or "mysql+mysqlconnector://" + environ.get("DBLOGIN") + "@localhost:3306/Project"
+     environ.get("dbURL") or "mysql+mysqlconnector://" + str(environ.get("DBLOGIN")) + "@localhost:3306/Project"
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_recycle': 299}

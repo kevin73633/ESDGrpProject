@@ -7,7 +7,7 @@ import os
 
 app = Flask(__name__)
 # Change to MySQL connection with your specific credentials
-app.config["SQLALCHEMY_DATABASE_URI"] = environ.get("dbURL") or "mysql+mysqlconnector://" + environ.get("DBLOGIN") + "@localhost:3306/Project"
+app.config["SQLALCHEMY_DATABASE_URI"] = environ.get("dbURL") or "mysql+mysqlconnector://" + str(environ.get("DBLOGIN")) + "@localhost:3306/Project"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
