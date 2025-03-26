@@ -78,11 +78,15 @@
                 </div>
               </div>
               <div>
+                <!-- IMPLEMENT REPORT FUNCTIONALITY pls -->
+                <button class="btn btn-sm btn-light" >
+                  Report
+                </button>
                 <button class="btn btn-sm btn-light me-2">
-                  <i class="fas fa-bell"></i>
+                  <i class="bi bi-bell"></i>
                 </button>
                 <button class="btn btn-sm btn-light" @click="goToProfile">
-                  <i class="fas fa-cog"></i>
+                  <i class="bi bi-cog">profile</i>
                 </button>
               </div>
             </div>
@@ -185,6 +189,9 @@
           
           <!-- Message input (fixed at bottom) with padding -->
           <div class="p-3 pb-4 border-top mt-auto">
+            <button class="btn btn-sm btn-light" >
+              Confirm deal
+            </button>
             <form @submit.prevent="sendMessage" class="w-100">
               <div class="input-group">
                 <input 
