@@ -441,7 +441,12 @@ export default {
         var deals = response2.data.data.deals;
         for (let index = 0; index < deals.length; index++) {
           const deal = deals[index];
-          const response = await axios.get(`${AUTH_API_URL}/user/${deal.buyerid}`, { 
+          var userid = "";
+          if (this.currentUserId == deal.sellerid)
+            userid = deal.buyerid
+          else
+            userid = deal.sellerid
+          const response = await axios.get(`${AUTH_API_URL}/user/${userid}`, { 
             withCredentials: true 
           });
           if (response.data.code === 200) {

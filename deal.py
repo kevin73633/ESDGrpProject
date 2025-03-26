@@ -11,6 +11,8 @@ from flask_sqlalchemy import SQLAlchemy
 from os import environ
 import os
 
+from sqlalchemy import or_
+
 app = Flask(__name__)
 
 CORS(app,
@@ -69,7 +71,7 @@ def get_all():
     ), 404
 @app.route("/get_deals_with_user/<string:userid>", methods=['GET'])
 def get_deals_with_user(userid):
-    deallist = db.session.scalars(db.select(Deal).filter_by(sellerid=userid)).all()
+    deallist = db.session.scalars(db.select(Deal).filter(or_(Deal.sellerid==userid, Deal.buyerid==userid))).all()
     print(deallist)
     if len(deallist):
         return jsonify(
