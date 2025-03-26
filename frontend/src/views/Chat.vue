@@ -315,7 +315,7 @@ import axios from 'axios';
 
 // API configuration
 const AUTH_API_URL = 'http://localhost:5001'; // Auth API URL (matches your Flask user.py)
-const CHAT_API_URL = 'http://localhost:5040'; // Chat API URL (matches your Flask chat.py)
+const CHAT_API_URL = 'http://localhost:5087'; // Chat API URL (matches your Flask chat.py)
 const DEAL_API_URL = 'http://localhost:5020'; // Chat API URL (matches your Flask chat.py)
 
 export default {
@@ -435,35 +435,43 @@ export default {
         this.apiError = null;
         
         // Get all users from the user API
-        const response = await axios.get(`${AUTH_API_URL}/user`, { 
-          withCredentials: true 
-        });
+        this.chatUsers = [];
         const response2 = await axios.get(`${DEAL_API_URL}/get_deals_with_user/` + this.currentUserId, {
         });
-        console.log(response2.data.deals)
-        if (response.data.code === 200) {
-          // Filter out the current user
-          const users = response.data.data.users.filter(user => user.uid !== this.currentUserId);
-          
-          // Transform to format needed for chat
-          this.chatUsers = users.map(user => ({
-            uid: user.uid,
-            name: user.name,
-            online: false, // You could implement online status if needed
-            active: false,
-            lastMessage: '',
-            lastMessageTime: '',
-            rating: user.rating
-          }));
-          
-          // If we have users, select the first one
-          if (this.chatUsers.length > 0) {
-            this.selectChat(this.chatUsers[0].uid);
+        var deals = response2.data.data.deals;
+        for (let index = 0; index < deals.length; index++) {
+          const deal = deals[index];
+          const response = await axios.get(`${AUTH_API_URL}/user/${deal.buyerid}`, { 
+            withCredentials: true 
+          });
+          if (response.data.code === 200) {
+            // Filter out the current user
+            const user = response.data.data.user;
+            
+            // Transform to format needed for chat
+            this.chatUsers.push({
+              uid: user.uid,
+              name: user.name,
+              online: false, // You could implement online status if needed
+              active: false,
+              lastMessage: '',
+              lastMessageTime: '',
+              rating: user.rating,
+              dealid: deal.dealid
+            });
           }
-        } else {
-          console.error("Error loading users:", response.data ? response.data.message : "Unknown error");
-          this.apiError = "Failed to load users list.";
         }
+        
+        
+        // If we have users, select the first one
+        if (this.chatUsers.length > 0) {
+          this.selectChat(this.chatUsers[0].uid);
+        }
+        
+        // else {
+        //   console.error("Error loading users:", response.data ? response.data.message : "Unknown error");
+        //   this.apiError = "Failed to load users list.";
+        // }
       } catch (error) {
         console.error("Error loading users:", error);
         this.apiError = "Failed to load users. Please try again later.";

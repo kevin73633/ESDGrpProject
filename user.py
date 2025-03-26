@@ -117,7 +117,7 @@ def login_required(f):
 
 # Protected route example
 @app.route("/user/profile", methods=['GET'])
-@login_required
+#@login_required
 def get_profile():
     uid = session['uid']
     user = db.session.scalar(db.select(User).filter_by(uid=uid))
@@ -134,7 +134,7 @@ def get_profile():
     }), 404
 
 @app.route("/user", methods=['GET'])
-@login_required
+#@login_required
 def get_all():
     userlist = db.session.scalars(db.select(User)).all()
     print(userlist)
@@ -155,7 +155,7 @@ def get_all():
     ), 404
 
 @app.route("/user/<string:uid>", methods=['GET'])
-@login_required
+#@login_required
 def get_single_user(uid):
     user = db.session.scalar(db.select(User).filter_by(uid=uid))
     if user:
@@ -163,7 +163,7 @@ def get_single_user(uid):
             {
                 "code": 200,
                 "data": {
-                    "user": [user.json()]
+                    "user": user.json()
                 }
             }
         )
@@ -175,7 +175,7 @@ def get_single_user(uid):
     ), 404
 
 @app.route("/user/getAccNumFromUser/<string:uid>", methods=['GET'])
-@login_required
+#@login_required
 def get_single_user_Acc(uid):
     user = db.session.scalar(db.select(User).filter_by(uid=uid))
     if user:
@@ -195,7 +195,7 @@ def get_single_user_Acc(uid):
     ), 404
 
 @app.route("/user/getPhoneFromUser/<string:uid>", methods=['GET'])
-@login_required
+#@login_required
 def get_single_user_phone(uid):
     user = db.session.scalar(db.select(User).filter_by(uid=uid))
     if user:

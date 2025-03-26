@@ -174,4 +174,4 @@ def send_message():
               
 if __name__ == '__main__':
     print("This is flask for " + os.path.basename(__file__) + ": chats ...")
-    app.run(host='0.0.0.0', port=5040, debug=True)
+    app.run(host='0.0.0.0', port=5087, debug=True)
