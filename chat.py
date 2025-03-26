@@ -19,7 +19,7 @@ CORS(app,
      allow_headers=["Content-Type", "Authorization"])
 
 app.config["SQLALCHEMY_DATABASE_URI"] = (
-     environ.get("dbURL") or "mysql+mysqlconnector://root@localhost:3306/Project"
+     environ.get("dbURL") or "mysql+mysqlconnector://" + environ.get("DBLOGIN") + "@localhost:3306/Project"
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_recycle': 299}
