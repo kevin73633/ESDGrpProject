@@ -316,6 +316,7 @@ import axios from 'axios';
 // API configuration
 const AUTH_API_URL = 'http://localhost:5001'; // Auth API URL (matches your Flask user.py)
 const CHAT_API_URL = 'http://localhost:5040'; // Chat API URL (matches your Flask chat.py)
+const DEAL_API_URL = 'http://localhost:5020'; // Chat API URL (matches your Flask chat.py)
 
 export default {
   name: 'ChatComponent',
@@ -437,7 +438,9 @@ export default {
         const response = await axios.get(`${AUTH_API_URL}/user`, { 
           withCredentials: true 
         });
-        
+        const response2 = await axios.get(`${DEAL_API_URL}/get_deals_with_user/` + this.currentUserId, {
+        });
+        console.log(response2.data.deals)
         if (response.data.code === 200) {
           // Filter out the current user
           const users = response.data.data.users.filter(user => user.uid !== this.currentUserId);
