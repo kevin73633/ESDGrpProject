@@ -40,7 +40,7 @@
                   :key="user.uid" 
                   class="p-3 border-bottom position-relative"
                   :class="{'bg-light': user.active}"
-                  @click="selectChat(user.uid)"
+                  @click="selectChat(user.uid, user.dealid)"
                   style="cursor: pointer;"
                 >
                   <div class="d-flex text-decoration-none text-dark">
@@ -71,17 +71,22 @@
             <div class="d-flex justify-content-between align-items-center">
               <div class="d-flex align-items-center">
                 <div class="position-relative me-2">
-                  <img src="/api/placeholder/40/40" alt="avatar" class="rounded-circle" width="40">
+                  <div class="bg-secondary rounded-circle" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                    <span class="text-white">{{ selectedChatUser ? selectedChatUser.name.charAt(0) : '?' }}</span>
+                  </div>
                 </div>
                 <div>
                   <p class="fw-bold mb-0">{{ selectedChatUser ? selectedChatUser.name : 'No chat selected' }}</p>
                 </div>
               </div>
               <div>
-                <!-- IMPLEMENT REPORT FUNCTIONALITY pls -->
-                <button class="btn btn-sm btn-light" >
-                  Report
-                </button>
+                <ReportButton 
+                  v-if="canShowReportButton"
+                  :reported-user-id="getOtherUserId()"
+                  :current-user-id="currentUserId"
+                  @report-submitted="handleReportSubmitted"
+                  @show-notification="showNotification"
+                />
                 <button class="btn btn-sm btn-light me-2">
                   <i class="bi bi-bell"></i>
                 </button>
@@ -95,7 +100,7 @@
           <!-- Chat content area (scrollable) -->
           <div ref="chatContent" class="flex-grow-1 overflow-auto p-3" id="chat-content">
             <!-- Deal Confirmation Banner (when confirmed) -->
-            <div v-if="dealConfirmed" class="alert alert-success mb-3 d-flex align-items-center">
+            <div v-if="currentDeal && currentDeal.status==1" class="alert alert-success mb-3 d-flex align-items-center">
               <i class="fas fa-check-circle me-2 fs-5"></i>
               <div>
                 <strong>Deal Confirmed!</strong> 
@@ -107,18 +112,15 @@
             </div>
           
             <!-- Deal card (if applicable) -->
-            <div class="card mb-3" v-if="dealDetails.id">
+            <div class="card mb-3" v-if="currentDeal && currentDeal.id">
               <div class="card-body position-relative">
                 <div class="d-flex align-items-center mb-3">
                   <div class="bg-light rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                    <span>{{ dealDetails.name ? dealDetails.name.charAt(0) : 'D' }}</span>
+                    <span>{{ currentDeal.product ? currentDeal.product.title.charAt(0) : 'D' }}</span>
                   </div>
                   <div>
-                    <p class="mb-0">{{ dealDetails.name || '<Deal name>' }}</p>
-                    <p class="text-muted small mb-0">{{ dealDetails.date || '<Date>' }}</p>
-                  </div>
-                  <div class="position-absolute top-0 end-0 m-3">
-                    <button @click="showReportDialog" class="btn btn-outline-secondary btn-sm">Report</button>
+                    <p class="mb-0">{{ currentDeal.product ? currentDeal.product.title : 'Product' }}</p>
+                    <p class="text-muted small mb-0">{{ currentDeal.createdAt ? formatDate(currentDeal.createdAt) : 'Unknown date' }}</p>
                   </div>
                 </div>
                 
@@ -130,11 +132,14 @@
                       </div>
                     </div>
                     <div class="flex-grow-1">
-                      <p class="mb-0">{{ dealDetails.description ? dealDetails.description.split(' ').slice(0, 3).join(' ') : 'Title' }}</p>
-                      <p class="text-muted small mb-0">{{ dealDetails.description || 'Description' }}</p>
+                      <p class="mb-0">{{ currentDeal.product ? currentDeal.product.title : 'Title' }}</p>
+                      <p class="text-muted small mb-0">{{ currentDeal.product ? currentDeal.product.description : 'Description' }}</p>
+                      <p v-if="currentDeal.product && currentDeal.product.price" class="text-primary fw-bold mb-0">
+                        ${{ parseFloat(currentDeal.product.price).toFixed(2) }}
+                      </p>
                     </div>
                     <div class="text-muted small">
-                      {{ dealDetails.date ? formatShortTime(dealDetails.date) : '' }}
+                      {{ currentDeal.createdAt ? formatShortTime(currentDeal.createdAt) : '' }}
                     </div>
                   </div>
                 </div>
@@ -142,7 +147,7 @@
             </div>
             
             <!-- Confirm/Verify Deal Button (if applicable) -->
-            <div class="mb-4" v-if="dealDetails.id">
+            <div class="mb-4" v-if="dealDetails && dealDetails.id">
               <button 
                 @click="dealConfirmed ? verifyDeal() : showDealConfirmation()" 
                 class="btn" 
@@ -178,7 +183,7 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- Quick responses -->
             <div class="d-flex justify-content-end flex-wrap gap-2 mb-4">
               <button v-for="(reply, index) in quickReplies" :key="index" @click="sendQuickReply(reply)" class="btn btn-light rounded-pill">
@@ -189,9 +194,31 @@
           
           <!-- Message input (fixed at bottom) with padding -->
           <div class="p-3 pb-4 border-top mt-auto">
-            <button class="btn btn-sm btn-light" >
-              Confirm deal
-            </button>
+            <!-- Deal button: Confirm or Verify based on status -->
+            <div v-if="currentDeal && (currentUserId === currentDeal.buyerId)" class="mb-3">
+              <!-- Show ConfirmDealButton if deal is in pending status -->
+              <ConfirmDealButton 
+                v-if="canConfirmDeal"
+                :deal-id="currentDeal.id"
+                :product-id="currentDeal.product ? currentDeal.product.id : ''"
+                :user-id="currentUserId"
+                :api-base-url="DEAL_API_URL"
+                @deal-confirmed="handleDealConfirmed"
+                @show-notification="showNotification"
+              />
+              
+              <!-- Show Verify Deal button if deal is already confirmed -->
+              <button 
+                v-else-if="currentDeal.status === 1"
+                @click="verifyDeal"
+                class="btn btn-success"
+              >
+                <i class="fas fa-check-double me-2"></i>
+                Verify Deal
+              </button>
+            </div>
+            
+            <!-- Message input form -->
             <form @submit.prevent="sendMessage" class="w-100">
               <div class="input-group">
                 <input 
@@ -218,108 +245,31 @@
       </div>
     </div>
     
-    <!-- Deal Confirmation Modal -->
-    <div v-if="showConfirmationModal" class="modal-backdrop fade show"></div>
-    <div v-if="showConfirmationModal" class="modal fade show d-block" tabindex="-1" role="dialog" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Confirm Deal Details</h5>
-            <button @click="closeModal" type="button" class="btn-close" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <div class="card mb-3">
-              <div class="card-body">
-                <h6 class="card-title">Deal Information</h6>
-                <div class="mb-2">
-                  <strong>Deal ID:</strong> {{ dealDetails.id }}
-                </div>
-                <div class="mb-2">
-                  <strong>Name:</strong> {{ dealDetails.name }}
-                </div>
-                <div class="mb-2">
-                  <strong>Date:</strong> {{ dealDetails.date }}
-                </div>
-                <div class="mb-2" v-if="dealDetails.amount !== undefined">
-                  <strong>Amount:</strong> ${{ dealDetails.amount.toFixed(2) }}
-                </div>
-                <div class="mb-2">
-                  <strong>Status:</strong> <span class="badge" :class="getStatusBadgeClass()">{{ dealDetails.status }}</span>
-                </div>
-                <div class="mb-2">
-                  <strong>Description:</strong> {{ dealDetails.description }}
-                </div>
-                <div class="mb-2" v-if="dealDetails.parties && dealDetails.parties.length">
-                  <strong>Parties:</strong> {{ dealDetails.parties.join(', ') }}
-                </div>
-              </div>
-            </div>
-            
-            <div class="alert alert-info">
-              <i class="fas fa-info-circle me-2"></i> Once confirmed, this deal cannot be modified.
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button @click="closeModal" type="button" class="btn btn-secondary">Cancel</button>
-            <button @click="confirmDeal" type="button" class="btn btn-primary">Confirm Deal</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Report Dialog -->
-    <div v-if="showReportModal" class="modal-backdrop fade show"></div>
-    <div v-if="showReportModal" class="modal fade show d-block" tabindex="-1" role="dialog" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Report Issue</h5>
-            <button @click="showReportModal = false" type="button" class="btn-close" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <form>
-              <div class="mb-3">
-                <label for="reportType" class="form-label">Issue Type</label>
-                <select id="reportType" class="form-select" v-model="reportData.type">
-                  <option value="">Select an issue type</option>
-                  <option value="incorrect_info">Incorrect Information</option>
-                  <option value="fraud">Potential Fraud</option>
-                  <option value="incomplete">Incomplete Details</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div class="mb-3">
-                <label for="reportDescription" class="form-label">Description</label>
-                <textarea 
-                  id="reportDescription" 
-                  class="form-control" 
-                  rows="4" 
-                  placeholder="Please provide details about the issue"
-                  v-model="reportData.description"
-                ></textarea>
-              </div>
-            </form>
-          </div>
-          <div class="modal-footer">
-            <button @click="showReportModal = false" type="button" class="btn btn-secondary">Cancel</button>
-            <button @click="submitReport" type="button" class="btn btn-danger">Submit Report</button>
-          </div>
-        </div>
-      </div>
+    <!-- Notification component -->
+    <div v-if="notification" :class="['notification', notification.type]">
+      {{ notification.message }}
+      <button @click="notification = null" class="close-notification">&times;</button>
     </div>
   </div>
 </template>
 
 <script>
 import axios from 'axios';
+import ConfirmDealButton from '../components/ConfirmDealButton.vue';
+import ReportButton from '../components/ReportButton.vue';
 
 // API configuration
 const AUTH_API_URL = 'http://localhost:5001'; // Auth API URL (matches your Flask user.py)
 const CHAT_API_URL = 'http://localhost:5087'; // Chat API URL (matches your Flask chat.py)
 const DEAL_API_URL = 'http://localhost:5020'; // Chat API URL (matches your Flask chat.py)
+const PRODUCT_API_URL = 'http://localhost:5005'; // Product API URL
 
 export default {
   name: 'ChatComponent',
+  components: {
+    ConfirmDealButton,
+    ReportButton
+  },
   data() {
     return {
       isLoading: false,
@@ -337,32 +287,40 @@ export default {
       messages: [],
       newMessage: "",
       validationError: "",
+
+      // Deal data
+      currentDeal: null,
+      selectedDealId: null,
       
       // UI state
-      showConfirmationModal: false,
-      showReportModal: false,
-      dealConfirmed: false,
-      
-      // Quick replies list for easier maintenance
-      quickReplies: ["Let's do it", "Great!", "Sounds good"],
-      
-      // Deal details - if you're using deal functionality
+      notification: null,
+
       dealDetails: {
-        id: "",
-        name: "",
-        date: "",
+        id: null,
+        name: '',
+        date: '',
         amount: 0,
-        status: "",
-        description: "",
+        status: 0,
+        description: '',
         parties: []
       },
       
-      // Report data
-      reportData: {
-        type: "",
-        description: ""
-      }
+      // Quick replies list for easier maintenance
+      quickReplies: ["Let's do it", "Great!", "Sounds good"],
     };
+  },
+  computed: {
+    // Only show confirm deal button if user is buyer and deal is in pending status
+    canConfirmDeal() {
+      return this.currentDeal && 
+             this.currentUserId === this.currentDeal.buyerId && 
+             this.currentDeal.status == 0
+    },
+    
+    // Determine if we can show the report button
+    canShowReportButton() {
+      return this.selectedChatUserId && this.currentUserId && this.selectedChatUserId !== this.currentUserId;
+    }
   },
   mounted() {
     // Check auth and initialize chats only when authenticated
@@ -417,7 +375,7 @@ export default {
       }
     },
     
-    // Add this method to initialize chat data
+    // Initialize chat data
     async initializeChats() {
       try {
         // Load users list
@@ -430,67 +388,143 @@ export default {
     
     // Load users for chat sidebar
     async loadUsers() {
-      try {
-        this.isLoading = true;
-        this.apiError = null;
+  try {
+    this.isLoading = true;
+    this.apiError = null;
+    
+    // Get all deals for the current user
+    this.chatUsers = [];
+    
+    console.log("Fetching deals for user:", this.currentUserId);
+    const dealsResponse = await axios.get(`${DEAL_API_URL}/get_deals_with_user/${this.currentUserId}`);
+    
+    // Log the deals response for debugging
+    console.log("Deals response:", dealsResponse.data);
+    
+    if (dealsResponse.data.code === 200 && dealsResponse.data.data && dealsResponse.data.data.deals) {
+      const deals = dealsResponse.data.data.deals;
+      console.log(`Found ${deals.length} deals`);
+      
+      // For each deal, get the other user's information
+      for (let deal of deals) {
+        // Determine the other user ID (seller or buyer)
+        const otherUserId = (this.currentUserId == deal.sellerid) 
+          ? deal.buyerid 
+          : deal.sellerid;
         
-        // Get all users from the user API
-        this.chatUsers = [];
-        const response2 = await axios.get(`${DEAL_API_URL}/get_deals_with_user/` + this.currentUserId, {
-        });
-        var deals = response2.data.data.deals;
-        for (let index = 0; index < deals.length; index++) {
-          const deal = deals[index];
-          var userid = "";
-          if (this.currentUserId == deal.sellerid)
-            userid = deal.buyerid
-          else
-            userid = deal.sellerid
-          const response = await axios.get(`${AUTH_API_URL}/user/${userid}`, { 
+        console.log(`Processing deal ${deal.dealid} with other user ${otherUserId}`);
+        
+        try {
+          console.log(`Fetching user data for ID: ${otherUserId}`);
+          const userResponse = await axios.get(`${AUTH_API_URL}/user/${otherUserId}`, { 
             withCredentials: true 
           });
-          if (response.data.code === 200) {
-            // Filter out the current user
-            const user = response.data.data.user;
-            
-            // Transform to format needed for chat
-            this.chatUsers.push({
-              uid: user.uid,
-              name: user.name,
-              online: false, // You could implement online status if needed
-              active: false,
-              lastMessage: '',
-              lastMessageTime: '',
-              rating: user.rating,
-              dealid: deal.dealid
-            });
+          
+          // Log the complete user response for debugging
+          console.log(`User API response for ${otherUserId}:`, userResponse.data);
+          
+          // Create a placeholder user if we can't get real data
+          let userData = {
+            uid: otherUserId,
+            name: `User ${otherUserId.substring(0, 4)}...`,
+            online: false,
+            rating: 0
+          };
+          
+          // Try to extract actual user data if available
+          if (userResponse.data.code === 200 && userResponse.data.data) {
+            // Check different possible structures
+            if (userResponse.data.data.user) {
+              if (Array.isArray(userResponse.data.data.user) && userResponse.data.data.user.length > 0) {
+                // If it's an array, use the first item
+                const user = userResponse.data.data.user[0];
+                if (user && user.uid) {
+                  userData = {
+                    uid: user.uid,
+                    name: user.name || `User ${user.uid.substring(0, 4)}...`,
+                    online: false,
+                    rating: user.rating || 0
+                  };
+                }
+              } else if (userResponse.data.data.user.uid) {
+                // If it's a direct object
+                const user = userResponse.data.data.user;
+                userData = {
+                  uid: user.uid,
+                  name: user.name || `User ${user.uid.substring(0, 4)}...`,
+                  online: false,
+                  rating: user.rating || 0
+                };
+              }
+            }
           }
+          
+          // Add to chat users with fallback data if needed
+          this.chatUsers.push({
+            uid: userData.uid,
+            name: userData.name,
+            online: userData.online,
+            active: false,
+            lastMessage: '',
+            lastMessageTime: '',
+            rating: userData.rating,
+            dealid: deal.dealid
+          });
+          
+          console.log(`Added user to chat list: ${userData.name} (${userData.uid})`);
+          
+        } catch (userError) {
+          console.error(`Error fetching user ${otherUserId}:`, userError);
+          
+          // Still add user with minimal data since we know they exist
+          this.chatUsers.push({
+            uid: otherUserId,
+            name: `User ${otherUserId.substring(0, 4)}...`, // Show partial ID as name
+            online: false,
+            active: false,
+            lastMessage: '',
+            lastMessageTime: '',
+            rating: 0,
+            dealid: deal.dealid
+          });
+          
+          console.log(`Added placeholder user for ID ${otherUserId}`);
         }
-        
-        
-        // If we have users, select the first one
-        if (this.chatUsers.length > 0) {
-          this.selectChat(this.chatUsers[0].uid);
-        }
-        
-        // else {
-        //   console.error("Error loading users:", response.data ? response.data.message : "Unknown error");
-        //   this.apiError = "Failed to load users list.";
-        // }
-      } catch (error) {
-        console.error("Error loading users:", error);
-        this.apiError = "Failed to load users. Please try again later.";
-      } finally {
-        this.isLoading = false;
       }
-    },
+      
+      console.log(`Final chat users count: ${this.chatUsers.length}`);
+    } else {
+      console.error("Invalid deals response format:", dealsResponse.data);
+      this.apiError = "Failed to load deals. Invalid response format.";
+    }
+    
+    // If we have users, select the first one
+    if (this.chatUsers.length > 0) {
+      console.log("Selecting first chat user:", this.chatUsers[0]);
+      this.selectChat(this.chatUsers[0].uid, this.chatUsers[0].dealid);
+    } else {
+      console.log("No chat users found");
+      this.selectedChatUser = null;
+      this.selectedChatUserId = null;
+      this.selectedDealId = null;
+      this.messages = [];
+      this.currentDeal = null;
+    }
+  } catch (error) {
+    console.error("Error loading users:", error);
+    this.apiError = "Failed to load users. Please try again later.";
+  } finally {
+    this.isLoading = false;
+  }
+},
     
     // Select a chat
-    selectChat(userId) {
+    selectChat(userId, dealId) {
       if (!userId) return;
       
       // Update the selected user
       this.selectedChatUserId = userId;
+      this.selectedDealId = dealId;
       
       // Find the user in our list
       const selectedUser = this.chatUsers.find(user => user.uid === userId);
@@ -504,6 +538,73 @@ export default {
         
         // Load chat messages for this user
         this.loadChatMessages(userId);
+
+        if (dealId) {
+          this.loadDealInformation(dealId);
+        } else {
+          this.currentDeal = null;
+        }
+      }
+    },
+
+    // Load deal information
+    async loadDealInformation(dealId) {
+      if (!dealId) return;
+      
+      try {
+        // Get deal information
+        const dealResponse = await axios.get(`${DEAL_API_URL}/deal/${dealId}`);
+        
+        if (dealResponse.data.code === 200 && dealResponse.data.data.deal) {
+          const dealData = dealResponse.data.data.deal;
+          
+          // Get product details
+          const productResponse = await axios.get(`${PRODUCT_API_URL}/products/${dealData.productid}`);
+          
+          if (productResponse.data.code === 200 && productResponse.data.data.product) {
+            const productData = productResponse.data.data.product;
+            
+            // Save combined deal and product information
+            this.currentDeal = {
+              id: dealData.dealid,
+              buyerId: dealData.buyerid,
+              sellerId: dealData.sellerid,
+              status: dealData.status,
+              createdAt: dealData.createdat,
+              product: {
+                id: productData.productid,
+                title: productData.title,
+                price: productData.price,
+                description: productData.description || 'No description available',
+                imageUrl: productData.image_url || null
+              }
+            };
+          } else {
+            // Deal exists but product details couldn't be fetched
+            this.currentDeal = {
+              id: dealData.dealid,
+              buyerId: dealData.buyerid,
+              sellerId: dealData.sellerid,
+              status: dealData.status,
+              createdAt: dealData.createdat,
+              product: {
+                id: dealData.productid,
+                title: 'Unknown Product',
+                price: 0,
+                description: 'Product details unavailable'
+              }
+            };
+          }
+        } else {
+          this.currentDeal = null;
+        }
+      } catch (error) {
+        console.error("Error loading deal information:", error);
+        this.showNotification({
+          message: "Failed to load deal information",
+          type: "error"
+        });
+        this.currentDeal = null;
       }
     },
     
@@ -633,6 +734,66 @@ export default {
         }
       });
     },
+
+    verifyDeal(){
+      // will be edited eventually
+      this.showNotification({
+        message: "Verifying deal... This functionality will be implemented later.",
+        type: "info"
+      });
+    },
+
+    // Helper to get the other user's ID for the report button
+    getOtherUserId() {
+      return this.selectedChatUserId || "";
+    },
+
+    // Handle deal confirmation result
+    handleDealConfirmed(result) {
+      console.log("Deal confirmed:", result);
+      
+      // Update current deal status to confirmed
+      if (this.currentDeal) {
+        this.currentDeal.status = 1;
+      }
+      
+      // Show success notification
+      this.showNotification({
+        message: `Deal for ${result.product.title} has been confirmed successfully!`,
+        type: 'success'
+      });
+      
+      // Refresh deal information
+      this.loadDealInformation(this.selectedDealId);
+      
+      // Scroll to top to show the banner
+      if (this.$refs.chatContent) {
+        this.$refs.chatContent.scrollTop = 0;
+      }
+    },
+    
+    // Handle report submission
+    handleReportSubmitted(result) {
+      console.log("Report submitted:", result);
+      
+      // Show notification instead of adding system message
+      this.showNotification({
+        message: "Your report has been submitted and is under review by our team.",
+        type: "info"
+      });
+    },
+    
+    // Show notification
+    showNotification({ message, type }) {
+      this.notification = { message, type };
+      
+      // Auto-hide notification after 5 seconds
+      setTimeout(() => {
+        if (this.notification && this.notification.message === message) {
+          this.notification = null;
+        }
+      }, 5000);
+    },
     
     // Deal methods (if needed)
     showDealConfirmation() {
@@ -645,13 +806,9 @@ export default {
     
     confirmDeal() {
       // Implement your deal confirmation logic here
-      this.dealDetails.status = "Confirmed";
+      this.dealDetails.status = 1;
       this.dealConfirmed = true;
       this.showConfirmationModal = false;
-    },
-    
-    verifyDeal() {
-      alert("Deal verification submitted!");
     },
     
     getStatusBadgeClass() {
@@ -674,30 +831,6 @@ export default {
       };
     },
     
-    submitReport() {
-      if (!this.reportData.type || !this.reportData.description.trim()) {
-        alert("Please fill in all report fields");
-        return;
-      }
-      
-      // Implement your report submission logic here
-      this.showReportModal = false;
-      alert("Your report has been submitted. Our team will review it shortly.");
-    },
-    
-    // Utility methods
-    formatMessageTime(timestamp) {
-      if (!timestamp) return '';
-      try {
-        const date = new Date(timestamp);
-        if (isNaN(date.getTime())) return ''; // Invalid date
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      } catch (e) {
-        console.error('Error formatting message time:', e);
-        return '';
-      }
-    },
-    
     formatShortTime(dateString) {
       if (!dateString) return '';
       try {
@@ -706,6 +839,36 @@ export default {
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       } catch (e) {
         console.error('Error formatting short time:', e);
+        return '';
+      }
+    },
+    formatDate(dateString) {
+      if (!dateString) return '';
+      
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return ''; // Invalid date
+        return date.toLocaleDateString(undefined, { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric'
+        });
+      } catch (e) {
+        console.error('Error formatting date:', e);
+        return '';
+      }
+    },
+
+    formatMessageTime(timestamp) {
+      if (!timestamp) return '';
+      
+      try {
+        const date = new Date(timestamp);
+        if (isNaN(date.getTime())) return '';
+        
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } catch (e) {
+        console.error('Error formatting message time:', e);
         return '';
       }
     },
