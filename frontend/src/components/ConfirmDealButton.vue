@@ -26,7 +26,7 @@
               <div class="product-details">
                 <h3>{{ dealDetails.productName }}</h3>
                 <p class="product-description">{{ dealDetails.description }}</p>
-                <div class="price-tag">{{ formatPrice(dealDetails.price) }}</div>
+                <div class="price-tag">{{ formatPrice(this.price) }}</div>
               </div>
             </div>
             
@@ -59,6 +59,7 @@
   
   <script>
     const DEAL_API_URL = 'http://localhost:5020'; 
+    const CONFIRM_DEAL_API_URL = 'http://localhost:5100/confirm_deal'; 
     import axios from 'axios';
     export default {
         name: 'ConfirmDealButton',
@@ -74,6 +75,10 @@
         userId: {
             type: [Number, String],
             required: true
+        },
+        price: {
+            type: [Number],
+            required:true
         }
         },
         data() {
@@ -91,9 +96,8 @@
         formattedDetails() {
             if (!this.dealDetails) return {};
             
-            // Filter out properties we don't want to show in the list
-            const { productName, description, ...rest } = this.dealDetails;
-            return rest;
+            const { status, ...filteredDetails } = this.dealDetails.deal; // Exclude status
+            return filteredDetails;
         }
         },
         methods: {
@@ -117,8 +121,7 @@
 
                     const dealData = await dealResponse.json();
                     console.log("Deal Data:", dealData); // Debugging
-
-                    this.dealDetails = dealData;
+                    this.dealDetails = dealData.data;
 
                 } catch (error) {
                     console.error('Error fetching deal details:', error);
@@ -136,11 +139,7 @@
             
             try {
             // API call to confirm the deal based on confirm_deal.py
-            const response = await axios.post(`${DEAL_API_URL}/confirm_deal/${this.dealId}`, {}, {
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
+            const response = await axios.post(`${CONFIRM_DEAL_API_URL}/${this.dealId}`);
             if (response.data.code === 200) {
                 this.$emit('deal-confirmed', response.data.data);
                 this.closeModal();

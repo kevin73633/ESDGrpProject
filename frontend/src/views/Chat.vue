@@ -202,7 +202,7 @@
                 :deal-id="currentDeal.id"
                 :product-id="currentDeal.product ? currentDeal.product.id : ''"
                 :user-id="currentUserId"
-                :api-base-url="DEAL_API_URL"
+                :price="currentDeal.product.price"
                 @deal-confirmed="handleDealConfirmed"
                 @show-notification="showNotification"
               />
