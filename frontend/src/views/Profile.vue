@@ -3,7 +3,7 @@
     <!-- Header with navigation -->
     <nav class="navbar navbar-light bg-light">
       <div class="container-fluid">
-        <router-link to="/" class="navbar-brand d-flex align-items-center">
+        <router-link to="/home" class="navbar-brand d-flex align-items-center">
           <button class="btn btn-link text-dark me-3 p-0" style="font-size: 1.5rem;">
              <i class="bi bi-arrow-left"></i>
             </button>

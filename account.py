@@ -12,10 +12,14 @@ import os
 
 app = Flask(__name__)
 
-CORS(app)
+CORS(app,
+     origins=["http://localhost:8080"],  # Your Vue.js frontend URL
+     supports_credentials=True,
+     methods=["GET", "POST", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization"])
 
 app.config["SQLALCHEMY_DATABASE_URI"] = (
-     environ.get("dbURL") or "mysql+mysqlconnector://root@localhost:3306/Project"
+     environ.get("dbURL") or "mysql+mysqlconnector://" + str(environ.get("DBLOGIN")) + "@localhost:3306/Project"
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_recycle': 299}
@@ -161,8 +165,8 @@ def escrow_funds():
             ), 400
         
         # Update balances
-        buyer_account.amount -= amount
-        escrow_account.amount += amount
+        #buyer_account.amount -= amount
+        #escrow_account.amount += amount
         
         # Commit the transaction
         db.session.commit()
@@ -272,8 +276,8 @@ def release_funds():
             ), 400
         
         # Update balances
-        escrow_account.amount -= amount
-        seller_account.amount += amount
+        #escrow_account.amount -= amount
+        #seller_account.amount += amount
         
         # Commit the transaction
         db.session.commit()
@@ -306,4 +310,4 @@ def release_funds():
 
 if __name__ == '__main__':
     print("This is flask for " + os.path.basename(__file__) + ": manage orders ...")
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app.run(host='0.0.0.0', port=5030, debug=True)

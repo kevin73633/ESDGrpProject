@@ -34,10 +34,6 @@ RABBITMQ_HOST = os.environ.get('RABBITMQ_HOST', 'localhost')
 RABBITMQ_EXCHANGE = os.environ.get('RABBITMQ_EXCHANGE', 'deal_events')
 
 def send_sms(phone_number, message):
-    return {
-            "success": True,
-            "message_id": 000
-        }
     """
     Send SMS to any phone number using Amazon SNS
     
@@ -92,8 +88,8 @@ def send_sms(phone_number, message):
             "error": str(e)
         }
 
-@app.route("/confirm_deal/<string:dealid>", methods=['POST'])
-def confirm_deal(dealid):
+@app.route("/verify_deal/<string:dealid>", methods=['POST'])
+def verify_deal(dealid):
     """
     Confirm a deal by orchestrating the entire deal confirmation flow
     """
@@ -120,33 +116,33 @@ def confirm_deal(dealid):
     product_data = product_result["data"]["product"]
     
     # Step 3: Get buyer information
-    buyer_result = invoke_http(f"{USER_SERVICE_URL}/user/{deal_data['buyerid']}", method="GET")
+    seller_result = invoke_http(f"{USER_SERVICE_URL}/user/{deal_data['sellerid']}", method="GET")
     
-    if buyer_result["code"] != 200:
+    if seller_result["code"] != 200:
         return jsonify({
             "code": 404,
-            "message": f"Buyer {deal_data['buyerid']} not found."
+            "message": f"Buyer {deal_data['sellerid']} not found."
         }), 404
     
-    buyer_data = buyer_result["data"]["user"]
+    seller_data = seller_result["data"]["user"][0]
     
     # Get buyer account number
-    buyer_account_result = invoke_http(
-        f"{USER_SERVICE_URL}/user/getAccNumFromUser/{deal_data['buyerid']}", 
+    seller_account_result = invoke_http(
+        f"{USER_SERVICE_URL}/user/getAccNumFromUser/{deal_data['sellerid']}", 
         method="GET"
     )
     
-    if buyer_account_result["code"] != 200:
+    if seller_account_result["code"] != 200:
         return jsonify({
             "code": 404,
             "message": f"Buyer account information not found."
         }), 404
     
-    buyer_account = buyer_account_result["data"]["AccNum"]
+    seller_account = seller_account_result["data"]["AccNum"]
     
     # Get buyer phone number (assuming you've added the endpoint in user.py)
     buyer_phone_result = invoke_http(
-        f"{USER_SERVICE_URL}/user/getPhoneFromUser/{deal_data['buyerid']}", 
+        f"{USER_SERVICE_URL}/user/getPhoneFromUser/{deal_data['sellerid']}", 
         method="GET"
     )
     
@@ -160,7 +156,7 @@ def confirm_deal(dealid):
     seller_data = None
     seller_phone = None
     if seller_result["code"] == 200:
-        seller_data = seller_result["data"]["user"]
+        seller_data = seller_result["data"]["user"][0]
         
         # Get seller phone
         seller_phone_result = invoke_http(
@@ -173,12 +169,12 @@ def confirm_deal(dealid):
     
     # Step 4: Process payment (escrow)
     payment_payload = {
-        "accnum": buyer_account,
+        "accnum": seller_account,
         "amount": product_data["price"]
     }
     
     payment_result = invoke_http(
-        f"{PAYMENT_SERVICE_URL}/payment/escrow",
+        f"{PAYMENT_SERVICE_URL}/payment/release",
         method="POST",
         json=payment_payload
     )
@@ -191,7 +187,7 @@ def confirm_deal(dealid):
     
     # Step 5: Update deal status to confirmed (assuming status code 2 = confirmed)
     update_deal_payload = {
-        "status": 1  # Confirmed status
+        "status": 2  # Confirmed status
     }
     
     update_deal_result = invoke_http(
@@ -220,8 +216,8 @@ def confirm_deal(dealid):
             "price": product_data["price"]
         },
         "buyer": {
-            "id": buyer_data["uid"],
-            "name": buyer_data["name"],
+            "id": seller_data["uid"],
+            "name": seller_data["name"],
             "phone": buyer_phone
         },
         "seller": {
@@ -271,4 +267,4 @@ def confirm_deal(dealid):
 
 if __name__ == '__main__':
     print("This is flask for " + os.path.basename(__file__) + ": confirm deal composite service ...")
-    app.run(host='0.0.0.0', port=5100, debug=True)
+    app.run(host='0.0.0.0', port=5200, debug=True)

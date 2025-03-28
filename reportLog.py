@@ -5,12 +5,15 @@ from datetime import datetime
 from os import environ
 
 app = Flask(__name__)
-CORS(app)
+CORS(app,
+     origins=["http://localhost:8080"],  # Your Vue.js frontend URL
+     supports_credentials=True,
+     methods=["GET", "POST", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization"])
 
-# Database Configuration
-app.config["SQLALCHEMY_DATABASE_URI"] = environ.get("dbURL") or "mysql+mysqlconnector://root@localhost:3306/Project"
+# Change to MySQL connection with your specific credentials
+app.config["SQLALCHEMY_DATABASE_URI"] = environ.get("dbURL") or "mysql+mysqlconnector://" + str(environ.get("DBLOGIN")) + "@localhost:3306/reportlog"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
 db = SQLAlchemy(app)
 
 # ReportLog Model
@@ -64,6 +67,4 @@ def get_report_log(ReportID):
         return jsonify({"code": 500, "message": "An error occurred while fetching the report", "error": str(e)}), 500
 
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()  # Ensure tables are created
     app.run(host="0.0.0.0", port=5004, debug=True)

@@ -7,11 +7,15 @@ from os import environ
 
 app = Flask(__name__)
 
-CORS(app)
+CORS(app,
+     origins=["http://localhost:8080"],  # Your Vue.js frontend URL
+     supports_credentials=True,
+     methods=["GET", "POST", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization"])
 
 # Define microservice URLs 
-ACCOUNT_SERVICE_URL = "http://localhost:5001"
-PAYMENT_RECORD_SERVICE_URL = "http://localhost:5002"
+ACCOUNT_SERVICE_URL = "http://localhost:5030"
+PAYMENT_RECORD_SERVICE_URL = "http://localhost:5032"
 
 # Define the escrow account number as a constant
 ESCROW_ACCOUNT = '0000000000000001'
@@ -168,4 +172,4 @@ def process_release_payment():
 
 if __name__ == '__main__':
     print("This is flask for " + os.path.basename(__file__) + ": payment composite service ...")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5031, debug=True)
