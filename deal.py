@@ -11,12 +11,18 @@ from flask_sqlalchemy import SQLAlchemy
 from os import environ
 import os
 
+from sqlalchemy import or_
+
 app = Flask(__name__)
 
-CORS(app)
+CORS(app,
+     origins=["http://localhost:8080"],  # Your Vue.js frontend URL
+     supports_credentials=True,
+     methods=["GET", "POST", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization"])
 
 app.config["SQLALCHEMY_DATABASE_URI"] = (
-     environ.get("dbURL") or "mysql+mysqlconnector://root@localhost:3306/Project"
+     environ.get("dbURL") or "mysql+mysqlconnector://" + str(environ.get("DBLOGIN")) + "@localhost:3306/Project"
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_recycle': 299}
@@ -63,7 +69,25 @@ def get_all():
             "message": "There are no deals."
         }
     ), 404
-    
+@app.route("/get_deals_with_user/<string:userid>", methods=['GET'])
+def get_deals_with_user(userid):
+    deallist = db.session.scalars(db.select(Deal).filter(or_(Deal.sellerid==userid, Deal.buyerid==userid))).all()
+    print(deallist)
+    if len(deallist):
+        return jsonify(
+            {
+                "code": 200,
+                "data": {
+                    "deals": [deal.json() for deal in deallist]
+                }
+            }
+        )
+    return jsonify(
+        {
+            "code": 404,
+            "message": "There are no deals."
+        }
+    ), 404
 @app.route("/deal/<string:dealid>", methods=['GET'])
 def get_single_deal(dealid):
     deal = db.session.scalar(db.select(Deal).filter_by(dealid=dealid))
