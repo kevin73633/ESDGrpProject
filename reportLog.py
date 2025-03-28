@@ -40,6 +40,12 @@ class ReportLog(db.Model):
 @app.route("/reportLog", methods=["POST"])
 def create_report_log():
     """Create a new report log entry."""
+    """{
+        "UserID": 12345678,
+        "ReportedUserID": 22345678,
+        "Reason": "Scam behaviour",
+        "Status": "Pending"
+        }"""
     try:
         data = request.json
         new_report = ReportLog(
