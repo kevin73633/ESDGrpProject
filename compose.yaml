@@ -1,9 +1,37 @@
+volumes:
+  rabbitmq_data:
+    name: deal_rabbitmq_data
+
 networks:
-  payment-net:
+  deal-net:
     driver: bridge
-    name: payment-net
+    name: deal-net
 
 services:
+  confirm_deal:
+    build:
+      context: ./
+      dockerfile: confirm_deal.Dockerfile
+    image: tshamel/confirm_deal:1.0
+    container_name: confirm_deal
+    restart: always
+    ports:
+      - "5100:5100"
+    depends_on:
+      - deal
+      - product
+      - user
+      - payment
+    environment:
+      PYTHONUNBUFFERED: 1
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_EXCHANGE: deal_events
+    networks:
+      - deal-net
+  
   account:
     build:
       context: ./
@@ -17,7 +45,7 @@ services:
       dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
       PYTHONUNBUFFERED: 1
     networks:
-      - payment-net
+      - deal-net
 
   paymentrecord:
     build:
@@ -32,7 +60,7 @@ services:
       dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
       PYTHONUNBUFFERED: 1
     networks:
-      - payment-net
+      - deal-net
 
   payment:
     build:
@@ -49,4 +77,65 @@ services:
     environment:
       PYTHONUNBUFFERED: 1
     networks:
-      - payment-net
+      - deal-net
+
+  user:
+    build:
+      context: ./
+      dockerfile: user.Dockerfile
+    image: tshamel/user:1.0
+    container_name: user
+    restart: always
+    ports:
+      - "5001:5001"
+    environment:
+      dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
+      PYTHONUNBUFFERED: 1
+    networks:
+      - deal-net
+
+  product:
+    build:
+      context: ./
+      dockerfile: product.Dockerfile
+    image: tshamel/product:1.0
+    container_name: product
+    restart: always
+    ports:
+      - "5005:5005"
+    environment:
+      dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
+      PYTHONUNBUFFERED: 1
+    networks:
+      - deal-net
+
+  deal:
+    build:
+      context: ./
+      dockerfile: deal.Dockerfile
+    image: tshamel/deal:1.0
+    container_name: deal
+    restart: always
+    ports:
+      - "5020:5020"
+    depends_on:
+      - user
+      - product
+    environment:
+      dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
+      PYTHONUNBUFFERED: 1
+    networks:
+      - deal-net
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    hostname: deal-rabbit
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes: 
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - deal-net

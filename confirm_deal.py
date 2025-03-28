@@ -19,10 +19,10 @@ CORS(app,
      allow_headers=["Content-Type", "Authorization"])
 
 # Define microservice URLs
-DEAL_SERVICE_URL = "http://localhost:5020"
-PRODUCT_SERVICE_URL = "http://localhost:5005"
-USER_SERVICE_URL = "http://localhost:5001"
-PAYMENT_SERVICE_URL = "http://localhost:5031"
+DEAL_SERVICE_URL = "http://deal:5020"
+PRODUCT_SERVICE_URL = "http://product:5005"
+USER_SERVICE_URL = "http://user:5001"
+PAYMENT_SERVICE_URL = "http://payment:5031"
 
 # AWS Configuration
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
