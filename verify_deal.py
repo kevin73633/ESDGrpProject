@@ -124,7 +124,7 @@ def verify_deal(dealid):
             "message": f"Buyer {deal_data['sellerid']} not found."
         }), 404
     
-    seller_data = seller_result["data"]["user"][0]
+    seller_data = seller_result["data"]["user"]
     
     # Get buyer account number
     seller_account_result = invoke_http(
@@ -156,7 +156,7 @@ def verify_deal(dealid):
     seller_data = None
     seller_phone = None
     if seller_result["code"] == 200:
-        seller_data = seller_result["data"]["user"][0]
+        seller_data = seller_result["data"]["user"]
         
         # Get seller phone
         seller_phone_result = invoke_http(
