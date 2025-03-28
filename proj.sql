@@ -75,7 +75,8 @@ CREATE TABLE IF NOT EXISTS `deal` (
 --
 
 INSERT INTO `deal` (`dealid`, `buyerid`, `sellerid`, `productid`, `status`) VALUES
-('11111111', '22345678', '12345678', 1, 0);
+('11111111', '22345678', '12345678', 1, 0),
+('11111112', '22345678', '12345678', 2, 0);
 COMMIT;
 --
 -- Table structure for table `account`

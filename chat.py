@@ -32,6 +32,7 @@ class Chat(db.Model):
     messageid = db.Column(db.String(64), primary_key=True)
     senderid = db.Column(db.String(64), nullable=False)
     receiverid = db.Column(db.String(64), nullable=False)
+    dealid = db.Column(db.String(64), nullable=False)
     message = db.Column(db.String(255), nullable=False)
     sentat = db.Column(db.String(64), nullable=False)
 
@@ -40,6 +41,7 @@ class Chat(db.Model):
             'messageid': self.messageid,
             'senderid': self.senderid,
             'receiverid': self.receiverid,
+            'dealid': self.dealid,
             'message': self.message,
             'sentat': self.sentat,
         }
@@ -71,9 +73,9 @@ def get_all():
         }
     ), 404
 
-@app.route("/chat/getmessagebetween/<string:senderid>/<string:receiverid>", methods=['GET'])
-def getChatBetween(senderid, receiverid):
-    messages = db.session.scalars(db.select(Chat).filter_by(senderid=senderid).filter_by(receiverid=receiverid).order_by(Chat.sentat))
+@app.route("/chat/getmessagebetween/<string:dealid>", methods=['GET'])
+def getChatBetween(dealid):
+    messages = db.session.scalars(db.select(Chat).filter_by(dealid=dealid).order_by(Chat.sentat))
     print(messages)
     if messages:
         return jsonify(
@@ -134,6 +136,7 @@ def send_message():
             "messageid": message_id,
             "senderid": data['senderid'],
             "receiverid": data['receiverid'],
+            "dealid": data['dealid'],
             "message": data['message'],
             "sentat": sent_at
         }

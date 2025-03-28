@@ -527,7 +527,7 @@ export default {
       this.selectedDealId = dealId;
       
       // Find the user in our list
-      const selectedUser = this.chatUsers.find(user => user.uid === userId);
+      const selectedUser = this.chatUsers.find(user => user.dealid === dealId);
       if (selectedUser) {
         this.selectedChatUser = selectedUser;
         
@@ -537,7 +537,7 @@ export default {
         });
         
         // Load chat messages for this user
-        this.loadChatMessages(userId);
+        this.loadChatMessages(dealId);
 
         if (dealId) {
           this.loadDealInformation(dealId);
@@ -609,8 +609,8 @@ export default {
     },
     
     // Load chat messages between current user and selected user
-    async loadChatMessages(receiverId) {
-      if (!this.currentUserId || !receiverId) return;
+    async loadChatMessages(dealid) {
+      if (!dealid) return;
       
       try {
         this.isChatLoading = true;
@@ -619,7 +619,7 @@ export default {
         
         try {
           // Get messages sent from current user to receiver
-          const sentResponse = await axios.get(`${CHAT_API_URL}/chat/getmessagebetween/${this.currentUserId}/${receiverId}`);
+          const sentResponse = await axios.get(`${CHAT_API_URL}/chat/getmessagebetween/${dealid}`);
           if (sentResponse.data.code === 200) {
             allMessages = [...sentResponse.data.data.messages];
           }
@@ -630,18 +630,18 @@ export default {
           }
         }
         
-        try {
-          // Get messages sent from receiver to current user
-          const receivedResponse = await axios.get(`${CHAT_API_URL}/chat/getmessagebetween/${receiverId}/${this.currentUserId}`);
-          if (receivedResponse.data.code === 200) {
-            allMessages = [...allMessages, ...receivedResponse.data.data.messages];
-          }
-        } catch (error) {
-          // Ignore 404 errors (no messages found)
-          if (error.response && error.response.status !== 404) {
-            throw error;
-          }
-        }
+        // try {
+        //   // Get messages sent from receiver to current user
+        //   const receivedResponse = await axios.get(`${CHAT_API_URL}/chat/getmessagebetween/${dealid}`);
+        //   if (receivedResponse.data.code === 200) {
+        //     allMessages = [...allMessages, ...receivedResponse.data.data.messages];
+        //   }
+        // } catch (error) {
+        //   // Ignore 404 errors (no messages found)
+        //   if (error.response && error.response.status !== 404) {
+        //     throw error;
+        //   }
+        // }
         
         if (allMessages.length > 0) {
           // Sort messages by timestamp
@@ -653,7 +653,7 @@ export default {
           
           // Update last message in the sidebar
           const lastMsg = this.messages[this.messages.length - 1];
-          const user = this.chatUsers.find(u => u.uid === receiverId);
+          const user = this.chatUsers.find(u => u.dealid === dealid);
           if (user) {
             user.lastMessage = lastMsg.message;
             user.lastMessageTime = this.formatTimeAgo(lastMsg.sentat);
@@ -690,6 +690,7 @@ export default {
         const response = await axios.post(`${CHAT_API_URL}/chat/send`, {
           senderid: this.currentUserId,
           receiverid: this.selectedChatUserId,
+          dealid: this.selectedDealId,
           message: this.newMessage,
           sentat: timestamp
         }, { withCredentials: true });
@@ -699,7 +700,7 @@ export default {
           this.messages.push(response.data.data.message);
           
           // Update last message in the sidebar
-          const user = this.chatUsers.find(u => u.uid === this.selectedChatUserId);
+          const user = this.chatUsers.find(u => u.dealid === this.selectedDealId);
           if (user) {
             user.lastMessage = this.newMessage;
             user.lastMessageTime = 'Just now';
