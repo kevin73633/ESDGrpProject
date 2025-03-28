@@ -12,13 +12,13 @@ CORS(app,
      allow_headers=["Content-Type", "Authorization"])
 
 # Change to MySQL connection with your specific credentials
-app.config["SQLALCHEMY_DATABASE_URI"] = environ.get("dbURL") or "mysql+mysqlconnector://" + str(environ.get("DBLOGIN")) + "@localhost:3306/reportlog"
+app.config["SQLALCHEMY_DATABASE_URI"] = environ.get("dbURL") or "mysql+mysqlconnector://" + str(environ.get("DBLOGIN")) + "@localhost:3306/Project"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # ReportLog Model
 class ReportLog(db.Model):
-    __tablename__ = 'ReportLog'
+    __tablename__ = 'reportlog'
 
     ReportID = db.Column(db.Integer, primary_key=True, autoincrement=True)
     CreatedAt = db.Column(db.DateTime, default=datetime.utcnow)
@@ -40,6 +40,12 @@ class ReportLog(db.Model):
 @app.route("/reportLog", methods=["POST"])
 def create_report_log():
     """Create a new report log entry."""
+    """{
+        "UserID": 12345678,
+        "ReportedUserID": 22345678,
+        "Reason": "Scam behaviour",
+        "Status": "Pending"
+        }"""
     try:
         data = request.json
         new_report = ReportLog(
