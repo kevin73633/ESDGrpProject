@@ -1,0 +1,52 @@
+networks:
+  payment-net:
+    driver: bridge
+    name: payment-net
+
+services:
+  account:
+    build:
+      context: ./
+      dockerfile: account.Dockerfile
+    image: tshamel/account:1.0
+    container_name: account
+    restart: always
+    ports:
+      - "5030:5030"
+    environment:
+      dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
+      PYTHONUNBUFFERED: 1
+    networks:
+      - payment-net
+
+  paymentrecord:
+    build:
+      context: ./
+      dockerfile: paymentrecord.Dockerfile
+    image: tshamel/paymentrecord:1.0
+    container_name: paymentrecord
+    restart: always
+    ports:
+      - "5032:5032"
+    environment:
+      dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
+      PYTHONUNBUFFERED: 1
+    networks:
+      - payment-net
+
+  payment:
+    build:
+      context: ./
+      dockerfile: payment.Dockerfile
+    image: tshamel/payment:1.0
+    container_name: payment
+    restart: always
+    ports:
+      - "5031:5031"
+    depends_on:
+      - account
+      - paymentrecord
+    environment:
+      PYTHONUNBUFFERED: 1
+    networks:
+      - payment-net

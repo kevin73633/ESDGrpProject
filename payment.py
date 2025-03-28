@@ -10,8 +10,8 @@ app = Flask(__name__)
 CORS(app)
 
 # Define microservice URLs 
-ACCOUNT_SERVICE_URL = "http://localhost:5030"
-PAYMENT_RECORD_SERVICE_URL = "http://localhost:5032"
+ACCOUNT_SERVICE_URL = "http://account:5030"
+PAYMENT_RECORD_SERVICE_URL = "http://paymentrecord:5032"
 
 # Define the escrow account number as a constant
 ESCROW_ACCOUNT = '0000000000000001'
