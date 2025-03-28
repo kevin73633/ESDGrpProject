@@ -43,11 +43,11 @@ export default {
   name: 'ReportButton',
   props: {
     reportedUserId: {
-      type: Number,
+      type: String,
       required: true
     },
     currentUserId: {
-      type: Number,
+      type: String,
       required: true
     }
   },

@@ -34,6 +34,10 @@ RABBITMQ_HOST = os.environ.get('RABBITMQ_HOST', 'localhost')
 RABBITMQ_EXCHANGE = os.environ.get('RABBITMQ_EXCHANGE', 'deal_events')
 
 def send_sms(phone_number, message):
+    return {
+            "success": True,
+            "message_id": 000
+        }
     """
     Send SMS to any phone number using Amazon SNS
     
@@ -124,7 +128,7 @@ def confirm_deal(dealid):
             "message": f"Buyer {deal_data['buyerid']} not found."
         }), 404
     
-    buyer_data = buyer_result["data"]["user"][0]
+    buyer_data = buyer_result["data"]["user"]
     
     # Get buyer account number
     buyer_account_result = invoke_http(
@@ -156,7 +160,7 @@ def confirm_deal(dealid):
     seller_data = None
     seller_phone = None
     if seller_result["code"] == 200:
-        seller_data = seller_result["data"]["user"][0]
+        seller_data = seller_result["data"]["user"]
         
         # Get seller phone
         seller_phone_result = invoke_http(
@@ -187,7 +191,7 @@ def confirm_deal(dealid):
     
     # Step 5: Update deal status to confirmed (assuming status code 2 = confirmed)
     update_deal_payload = {
-        "status": 2  # Confirmed status
+        "status": 1  # Confirmed status
     }
     
     update_deal_result = invoke_http(

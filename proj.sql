@@ -136,6 +136,7 @@ CREATE TABLE IF NOT EXISTS `chat` (
   `messageid` varchar(64) NOT NULL,
   `senderid` varchar(64) NOT NULL,
   `receiverid` varchar(64) NOT NULL,
+  `dealid` varchar(64) NOT NULL,
   `message` varchar(255) NOT NULL,
   `sentat` DATETIME DEFAULT now(),
   PRIMARY KEY (`messageid`)
@@ -157,12 +158,12 @@ DELIMITER ;
 -- Dumping data for table `chat`
 --
 
-INSERT INTO `chat` (`senderid`, `receiverid`, `message`) VALUES
-(12345678, 22345678, 'bruh'),
-(12345678, 22345678, 'bruhh'),
-(12345678, 22345678, 'bruhhh'),
-(12345678, 22345678, 'bruhhhh'),
-(12345678, 22345678, 'bruhhhhhh');
+INSERT INTO `chat` (`senderid`, `receiverid`, `dealid`, `message`) VALUES
+(12345678, 22345678, 11111111,'bruh'),
+(12345678, 22345678, 11111111,'bruhh'),
+(12345678, 22345678, 11111111,'bruhhh'),
+(12345678, 22345678, 11111111,'bruhhhh'),
+(12345678, 22345678, 11111111,'bruhhhhhh');
 COMMIT;
 --
 -- Table structure for table `ReportLog`
