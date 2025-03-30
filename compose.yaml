@@ -22,6 +22,33 @@ services:
       - product
       - user
       - payment
+      - rabbitmq
+    environment:
+      PYTHONUNBUFFERED: 1
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_EXCHANGE: deal_events
+    networks:
+      - deal-net
+
+  
+  verify_deal:
+    build:
+      context: ./
+      dockerfile: verify_deal.Dockerfile
+    image: tshamel/verify_deal:1.0
+    container_name: verify_deal
+    restart: always
+    ports:
+      - "5200:5200"
+    depends_on:
+      - deal
+      - product
+      - user
+      - payment
+      - rabbitmq
     environment:
       PYTHONUNBUFFERED: 1
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
@@ -118,12 +145,76 @@ services:
     restart: always
     ports:
       - "5020:5020"
-    depends_on:
-      - user
-      - product
     environment:
       dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
       PYTHONUNBUFFERED: 1
+    networks:
+      - deal-net
+
+  chat:
+    build:
+      context: ./
+      dockerfile: chat.Dockerfile
+    image: tshamel/chat:1.0
+    container_name: chat
+    restart: always
+    ports:
+      - "5087:5087"
+    environment:
+      dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
+      PYTHONUNBUFFERED: 1
+    networks:
+      - deal-net
+
+  chatgpt:
+    build:
+      context: ./
+      dockerfile: chatgpt.Dockerfile
+    image: tshamel/chatgpt:1.0
+    container_name: chatgpt
+    restart: always
+    ports:
+      - "5002:5002"
+    environment:
+      PYTHONUNBUFFERED: 1
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    networks:
+      - deal-net
+
+  reportlog:
+    build:
+      context: ./
+      dockerfile: reportLog.Dockerfile
+    image: tshamel/reportlog:1.0
+    container_name: reportlog
+    restart: always
+    ports:
+      - "5004:5004"
+    environment:
+      dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
+      PYTHONUNBUFFERED: 1
+    networks:
+      - deal-net
+
+  notification:
+    build:
+      context: ./
+      dockerfile: notification.Dockerfile
+    image: tshamel/notification:1.0
+    container_name: notification
+    restart: always
+    ports:
+      - "5075:5075"
+    depends_on:
+      - rabbitmq
+    environment:
+      PYTHONUNBUFFERED: 1
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_EXCHANGE: deal_events
+      RABBITMQ_QUEUE: notification_queue
     networks:
       - deal-net
 

@@ -55,7 +55,8 @@ def connect(hostname=None, port=None, exchange_name=None, exchange_type=None, ma
             channel.exchange_declare(
                 exchange=exchange_name,
                 exchange_type=exchange_type,
-                passive=True,
+                passive=False,
+                durable=True
             )
             # passive=True: If exchange does not exist, raise an error.
 
