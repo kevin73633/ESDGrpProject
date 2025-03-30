@@ -196,6 +196,21 @@ services:
     networks:
       - deal-net
 
+  rating:
+    build:
+      context: ./
+      dockerfile: rating.Dockerfile
+    image: tshamel/rating:1.0
+    container_name: rating
+    restart: always
+    ports:
+      - "5003:5003"
+    environment:
+      dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
+      PYTHONUNBUFFERED: 1
+    networks:
+      - deal-net
+
   notification:
     build:
       context: ./
