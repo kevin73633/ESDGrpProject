@@ -100,7 +100,7 @@ def send_message():
         print("Received data:", data)  # Debug: log received data
         
         # Check required fields
-        required_fields = ['senderid', 'receiverid', 'message']
+        required_fields = ['senderid', 'receiverid', 'message', 'dealid']
         for field in required_fields:
             if field not in data:
                 print(f"Missing field: {field}")  # Debug

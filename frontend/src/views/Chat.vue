@@ -196,26 +196,17 @@
           <div class="p-3 pb-4 border-top mt-auto">
             <!-- Deal button: Confirm or Verify based on status -->
             <div v-if="currentDeal && (currentUserId === currentDeal.buyerId)" class="mb-3">
-              <!-- Show ConfirmDealButton if deal is in pending status -->
-              <ConfirmDealButton 
-                v-if="canConfirmDeal"
-                :deal-id="currentDeal.id"
-                :product-id="currentDeal.product ? currentDeal.product.id : ''"
-                :user-id="currentUserId"
-                :price="currentDeal.product.price"
-                @deal-confirmed="handleDealConfirmed"
-                @show-notification="showNotification"
-              />
               
               <!-- Show Verify Deal button if deal is already confirmed -->
-              <button 
-                v-else-if="currentDeal.status === 1"
-                @click="verifyDeal"
-                class="btn btn-success"
-              >
-                <i class="fas fa-check-double me-2"></i>
-                Verify Deal
-              </button>
+              <VerifyButton 
+              v-if="canVerifyReceipt"
+              :deal-id="currentDeal.id"
+              :product-id="currentDeal.product ? currentDeal.product.id : ''"
+              :user-id="currentUserId"
+              :price="currentDeal.product ? currentDeal.product.price : 0"
+              @deal-verified="handleDealVerified"
+              @show-notification="showNotification"
+              />
             </div>
             
             <!-- Message input form -->
@@ -257,6 +248,7 @@
 import axios from 'axios';
 import ConfirmDealButton from '../components/ConfirmDealButton.vue';
 import ReportButton from '../components/ReportButton.vue';
+import VerifyButton from '../components/VerifyButton.vue';
 
 // API configuration
 const AUTH_API_URL = 'http://localhost:5001'; // Auth API URL (matches your Flask user.py)
@@ -268,7 +260,8 @@ export default {
   name: 'ChatComponent',
   components: {
     ConfirmDealButton,
-    ReportButton
+    ReportButton,
+    VerifyButton
   },
   data() {
     return {
@@ -304,6 +297,10 @@ export default {
         description: '',
         parties: []
       },
+      verificationStatus: {
+        buyerVerified: false,
+        sellerVerified: false
+      },
       
       // Quick replies list for easier maintenance
       quickReplies: ["Let's do it", "Great!", "Sounds good"],
@@ -315,6 +312,22 @@ export default {
       return this.currentDeal && 
              this.currentUserId === this.currentDeal.buyerId && 
              this.currentDeal.status == 0
+    },
+
+    canVerifyReceipt() {
+      if (!this.currentDeal) return false;
+      
+      const isValidStatus = this.currentDeal.status === 2 || this.currentDeal.status === 3;
+      
+      // Check if the current user has already verified
+      let currentUserVerified = false;
+      if (this.currentUserId === this.currentDeal.buyerId) {
+        currentUserVerified = this.verificationStatus.buyerVerified;
+      } else if (this.currentUserId === this.currentDeal.sellerId) {
+        currentUserVerified = this.verificationStatus.sellerVerified;
+      }
+      
+      return isValidStatus && !currentUserVerified;
     },
     
     // Determine if we can show the report button
@@ -736,14 +749,6 @@ export default {
       });
     },
 
-    verifyDeal(){
-      // will be edited eventually
-      this.showNotification({
-        message: "Verifying deal... This functionality will be implemented later.",
-        type: "info"
-      });
-    },
-
     // Helper to get the other user's ID for the report button
     getOtherUserId() {
       return this.selectedChatUserId || "";
@@ -755,12 +760,41 @@ export default {
       
       // Update current deal status to confirmed
       if (this.currentDeal) {
-        this.currentDeal.status = 1;
+        if (this.currentDeal.status ==0){
+          this.currentDeal.status = 1;
+        }
+        else{
+          this.currentDeal.status = 2;
+        }
       }
       
       // Show success notification
       this.showNotification({
         message: `Deal for ${result.product.title} has been confirmed successfully!`,
+        type: 'success'
+      });
+      
+      // Refresh deal information
+      this.loadDealInformation(this.selectedDealId);
+      
+      // Scroll to top to show the banner
+      if (this.$refs.chatContent) {
+        this.$refs.chatContent.scrollTop = 0;
+      }
+    },
+
+    // Handle deal verified result
+    handleDealVerified(data) {
+      console.log("Deal verified:", data);
+      
+      // Update current deal status to verified
+      if (this.currentDeal) {
+        this.currentDeal.status = 3;
+      }
+      
+      // Show success notification
+      this.showNotification({
+        message: `Receipt of goods for ${data.product.title} has been verified successfully!`,
         type: 'success'
       });
       
