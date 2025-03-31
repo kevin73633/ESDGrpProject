@@ -233,7 +233,7 @@ def confirm_deal(dealid, currentuserid):
     # Step 8: Send SMS notifications
     sms_results = {}
     if user_phone:
-        buyer_message = f"Your reservation of {product_data['title']} for ${product_data['price']} has been confirmed. Deal ID: {dealid}"
+        buyer_message = f"Your reservation/sale of {product_data['title']} for ${product_data['price']} has been confirmed. Deal ID: {dealid}"
         sms_results["buyer_sms"] = send_sms(user_phone, buyer_message)
     
     # Return success response with combined data

@@ -325,18 +325,9 @@ export default {
 
     canVerifyReceipt() {
       if (!this.currentDeal) return false;
-      
-      const isValidStatus = this.currentDeal.status === 3 || this.currentDeal.status === 4;
-      
-      // Check if the current user has already verified
-      let currentUserVerified = false;
-      if (this.currentUserId === this.currentDeal.buyerId) {
-        currentUserVerified = this.verificationStatus.buyerVerified;
-      } else if (this.currentUserId === this.currentDeal.sellerId) {
-        currentUserVerified = this.verificationStatus.sellerVerified;
-      }
-      
-      return isValidStatus && !currentUserVerified;
+      return this.currentDeal && 
+             (this.currentUserId == this.currentDeal.buyerId && (this.currentDeal.status == 3 || this.currentDeal.status == 5) || 
+             this.currentUserId == this.currentDeal.sellerId && (this.currentDeal.status == 3 || this.currentDeal.status == 4))
     },
     
     // Determine if we can show the report button
