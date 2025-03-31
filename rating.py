@@ -38,7 +38,7 @@ def update_user_rating():
             return jsonify({"error": "InputMatchID query parameter is required"}), 400
 
         response = requests.post(
-            f"{UPDATE_USER_RATING_URL}?InputMatchID={input_match_id}", json=data
+            f"{UPDATE_USER_RATING_URL}?DealID={deal_id}", json=data
         )
         return jsonify(response.json()), response.status_code
     except requests.exceptions.RequestException as e:
