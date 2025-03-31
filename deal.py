@@ -106,8 +106,16 @@ def get_single_deal(dealid):
             "message": "There is no deal."
         }
     ), 404
-
+#
 # New endpoint to update deal status
+# deal statuses
+# 0 = unconfirmed both sides
+# 1 = confirmed and paid buyer side
+# 2 = confirmed seller side
+# 3 = confirmed both sides
+# 4 = verified buyer side
+# 5 = verified seller side
+# 6 = verified both sides
 @app.route("/deal/<string:dealid>/status", methods=['PUT'])
 def update_deal_status(dealid):
     deal = db.session.scalar(db.select(Deal).filter_by(dealid=dealid))

@@ -195,8 +195,17 @@
           <!-- Message input (fixed at bottom) with padding -->
           <div class="p-3 pb-4 border-top mt-auto">
             <!-- Deal button: Confirm or Verify based on status -->
-            <div v-if="currentDeal && (currentUserId === currentDeal.buyerId)" class="mb-3">
-              
+            <div v-if="currentDeal" class="mb-3">
+              <!-- Show ConfirmDealButton if deal is in pending status -->
+              <ConfirmDealButton 
+                v-if="canConfirmDeal"
+                :deal-id="currentDeal.id"
+                :product-id="currentDeal.product ? currentDeal.product.id : ''"
+                :user-id="currentUserId"
+                :price="currentDeal.product.price"
+                @deal-confirmed="handleDealConfirmed"
+                @show-notification="showNotification"
+              />
               <!-- Show Verify Deal button if deal is already confirmed -->
               <VerifyButton 
               v-if="canVerifyReceipt"
@@ -310,14 +319,14 @@ export default {
     // Only show confirm deal button if user is buyer and deal is in pending status
     canConfirmDeal() {
       return this.currentDeal && 
-             this.currentUserId === this.currentDeal.buyerId && 
-             this.currentDeal.status == 0
+             (this.currentUserId == this.currentDeal.buyerId && (this.currentDeal.status == 0 || this.currentDeal.status == 2) || 
+             this.currentUserId == this.currentDeal.sellerId && (this.currentDeal.status == 0 || this.currentDeal.status == 1))
     },
 
     canVerifyReceipt() {
       if (!this.currentDeal) return false;
       
-      const isValidStatus = this.currentDeal.status === 2 || this.currentDeal.status === 3;
+      const isValidStatus = this.currentDeal.status === 3 || this.currentDeal.status === 4;
       
       // Check if the current user has already verified
       let currentUserVerified = false;
