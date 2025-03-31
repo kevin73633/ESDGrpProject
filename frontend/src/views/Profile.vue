@@ -15,7 +15,7 @@
             class="btn" 
             :class="isEditing ? 'btn-success' : 'btn-outline-primary'"
           >
-            <i :class="isEditing ? 'fas fa-save' : 'fas fa-edit'" class="me-2"></i>
+            <i :class="isEditing ? 'bi bi-floppy' : 'bi bi-pencil-square'" class="me-2"></i>
             {{ isEditing ? 'Save Changes' : 'Edit Profile' }}
           </button>
         </div>
@@ -23,7 +23,19 @@
     </nav>
     
     <div class="container py-5">
-      <div class="row">
+      <div v-if="loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Loading profile data...</p>
+      </div>
+      
+      <div v-else-if="error" class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        {{ error }}
+      </div>
+      
+      <div v-else class="row">
         <!-- Left Column: Profile Details -->
         <div class="col-lg-4">
           <div class="card mb-4">
@@ -37,7 +49,7 @@
                 >
                 <div v-if="isEditing" class="position-absolute bottom-0 end-0">
                   <label for="profilePhoto" class="btn btn-sm btn-primary rounded-circle">
-                    <i class="fas fa-camera"></i>
+                    <i class="bi bi-camera"></i>
                   </label>
                   <input 
                     type="file" 
@@ -48,36 +60,23 @@
                   >
                 </div>
               </div>
-              <h5 class="my-3">{{ user.fullName }}</h5>
-              <p class="text-muted mb-1">{{ user.title }}</p>
-              <p class="text-muted mb-4">{{ user.location }}</p>
-              
-              <div class="d-flex justify-content-center mb-2">
-                <div class="me-3">
-                  <strong>{{ user.dealsCompleted }}</strong>
-                  <div class="small text-muted">Deals</div>
-                </div>
-                <div class="border-start ps-3">
-                  <strong>{{ user.memberSince }}</strong>
-                  <div class="small text-muted">Member Since</div>
-                </div>
-              </div>
-              
+              <h5 class="my-3">{{ user.name }}</h5>
+
               <!-- User Ratings -->
               <div class="rating-summary text-center mt-3">
                 <div class="d-flex align-items-center justify-content-center mb-2">
-                  <span class="h3 mb-0 me-2">{{ averageRating.toFixed(1) }}</span>
+                  <span class="h3 mb-0 me-2">{{ user.rating || 0 }}</span>
                   <div>
                     <div class="stars-container">
                       <i 
                         v-for="star in 5" 
                         :key="star" 
                         :class="[
-                          star <= Math.round(averageRating) ? 'fas fa-star text-warning' : 'far fa-star text-muted'
+                          star <= Math.round(user.rating || 0) ? 'bi bi-star-fill text-warning' : 'bi bi-star text-muted'
                         ]"
                       ></i>
                     </div>
-                    <div class="small text-muted">{{ userRatings.length }} ratings</div>
+                    <div class="small text-muted">{{ userRatings.length || 0 }} ratings</div>
                   </div>
                 </div>
               </div>
@@ -89,28 +88,18 @@
             <div class="card-header d-flex justify-content-between align-items-center">
               <h6 class="mb-0">Contact Information</h6>
               <span v-if="isEditing" class="text-primary small">
-                <i class="fas fa-info-circle me-1"></i> Editing enabled
+                <i class="bi bi-info-circle me-1"></i> Editing enabled
               </span>
             </div>
             <div class="card-body">
               <div class="mb-3">
-                <label class="form-label small text-muted">Email</label>
-                <div v-if="!isEditing" class="mb-0">{{ user.email }}</div>
-                <input 
-                  v-else 
-                  type="email" 
-                  class="form-control" 
-                  v-model="editedUser.email"
-                  :class="{ 'is-invalid': validationErrors.email }" 
-                >
-                <div v-if="validationErrors.email" class="invalid-feedback">
-                  {{ validationErrors.email }}
-                </div>
+                <label class="form-label small text-muted">Account Number</label>
+                <div class="mb-0">{{ user.accnum }}</div>
               </div>
               
               <div class="mb-3">
                 <label class="form-label small text-muted">Phone</label>
-                <div v-if="!isEditing" class="mb-0">{{ user.phone }}</div>
+                <div v-if="!isEditing" class="mb-0">{{ user.phone || 'Not specified' }}</div>
                 <input 
                   v-else 
                   type="tel" 
@@ -121,20 +110,6 @@
                 <div v-if="validationErrors.phone" class="invalid-feedback">
                   {{ validationErrors.phone }}
                 </div>
-              </div>
-              
-              <div class="mb-0">
-                <label class="form-label small text-muted">Preferred Contact Method</label>
-                <div v-if="!isEditing" class="mb-0">{{ user.preferredContactMethod }}</div>
-                <select 
-                  v-else 
-                  class="form-select" 
-                  v-model="editedUser.preferredContactMethod"
-                >
-                  <option value="email">Email</option>
-                  <option value="phone">Phone</option>
-                  <option value="inapp">In-App Messaging</option>
-                </select>
               </div>
             </div>
           </div>
@@ -153,36 +128,44 @@
                   <label class="form-label small text-muted">Full Name</label>
                 </div>
                 <div class="col-sm-9">
-                  <div v-if="!isEditing">{{ user.fullName }}</div>
+                  <div v-if="!isEditing">{{ user.name }}</div>
                   <input 
                     v-else 
                     type="text" 
                     class="form-control" 
-                    v-model="editedUser.fullName"
-                    :class="{ 'is-invalid': validationErrors.fullName }" 
+                    v-model="editedUser.name"
+                    :class="{ 'is-invalid': validationErrors.name }" 
                   >
-                  <div v-if="validationErrors.fullName" class="invalid-feedback">
-                    {{ validationErrors.fullName }}
+                  <div v-if="validationErrors.name" class="invalid-feedback">
+                    {{ validationErrors.name }}
                   </div>
                 </div>
               </div>
               
               <div class="row mb-3">
                 <div class="col-sm-3">
-                  <label class="form-label small text-muted">Username</label>
+                  <label class="form-label small text-muted">User ID</label>
                 </div>
                 <div class="col-sm-9">
-                  <div v-if="!isEditing">@{{ user.username }}</div>
-                  <div class="input-group" v-else>
-                    <span class="input-group-text">@</span>
-                    <input 
-                      type="text" 
-                      class="form-control" 
-                      v-model="editedUser.username"
-                      :class="{ 'is-invalid': validationErrors.username }" 
-                    >
-                    <div v-if="validationErrors.username" class="invalid-feedback">
-                      {{ validationErrors.username }}
+                  <div>{{ user.uid }}</div>
+                </div>
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-sm-3">
+                  <label class="form-label small text-muted">Rating</label>
+                </div>
+                <div class="col-sm-9">
+                  <div class="d-flex align-items-center">
+                    <span>{{ user.rating }}</span>
+                    <div class="stars-container ms-2">
+                      <i 
+                        v-for="star in 5" 
+                        :key="star" 
+                        :class="[
+                          star <= Math.round(user.rating || 0) ? 'bi bi-star-fill text-warning' : 'bi bi-star text-muted'
+                        ]"
+                      ></i>
                     </div>
                   </div>
                 </div>
@@ -190,32 +173,10 @@
               
               <div class="row mb-3">
                 <div class="col-sm-3">
-                  <label class="form-label small text-muted">Title/Bio</label>
+                  <label class="form-label small text-muted">Account Number</label>
                 </div>
                 <div class="col-sm-9">
-                  <div v-if="!isEditing">{{ user.title }}</div>
-                  <input 
-                    v-else 
-                    type="text" 
-                    class="form-control" 
-                    v-model="editedUser.title"
-                    placeholder="e.g. Deal Hunter, Food Enthusiast, etc."
-                  >
-                </div>
-              </div>
-              
-              <div class="row mb-3">
-                <div class="col-sm-3">
-                  <label class="form-label small text-muted">Location</label>
-                </div>
-                <div class="col-sm-9">
-                  <div v-if="!isEditing">{{ user.location }}</div>
-                  <input 
-                    v-else 
-                    type="text" 
-                    class="form-control" 
-                    v-model="editedUser.location"
-                  >
+                  <div>{{ user.accnum }}</div>
                 </div>
               </div>
             </div>
@@ -230,25 +191,25 @@
                 class="btn btn-sm btn-outline-primary"
                 @click="addNewPaymentMethod"
               >
-                <i class="fas fa-plus me-1"></i> Add New
+                <i class="bi bi-plus me-1"></i> Add New
               </button>
             </div>
             <div class="card-body">
-              <div v-if="user.paymentMethods.length === 0" class="text-center py-4">
-                <i class="fas fa-credit-card text-muted mb-3" style="font-size: 2rem;"></i>
+              <div v-if="paymentMethods.length === 0" class="text-center py-4">
+                <i class="bi bi-credit-card text-muted mb-3" style="font-size: 2rem;"></i>
                 <p class="mb-0">No payment methods added yet.</p>
                 <button 
                   v-if="isEditing" 
                   class="btn btn-primary mt-3"
                   @click="addNewPaymentMethod"
                 >
-                  <i class="fas fa-plus me-1"></i> Add Payment Method
+                  <i class="bi bi-plus me-1"></i> Add Payment Method
                 </button>
               </div>
               
               <div v-else>
                 <div 
-                  v-for="(method, index) in editedUser.paymentMethods" 
+                  v-for="(method, index) in paymentMethods" 
                   :key="index"
                   class="payment-method mb-3 p-3 border rounded"
                 >
@@ -306,7 +267,7 @@
                         class="btn btn-sm btn-outline-danger"
                         @click="removePaymentMethod(index)"
                       >
-                        <i class="fas fa-trash"></i>
+                        <i class="bi bi-trash"></i>
                       </button>
                     </div>
                   </div>
@@ -329,6 +290,19 @@
               </div>
             </div>
           </div>
+
+          <!-- Activity History -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h6 class="mb-0">Activity History</h6>
+            </div>
+            <div class="card-body">
+              <p class="text-muted text-center py-4">
+                <i class="bi bi-clock-history me-2"></i>
+                Activity history will be displayed here
+              </p>
+            </div>
+          </div>
           
           <!-- Ratings and Reviews -->
           <div class="card">
@@ -337,7 +311,7 @@
             </div>
             <div class="card-body">
               <div v-if="userRatings.length === 0" class="text-center py-4">
-                <i class="fas fa-star text-muted mb-3" style="font-size: 2rem;"></i>
+                <i class="bi bi-star-fill text-muted mb-3" style="font-size: 2rem;"></i>
                 <p class="mb-0">No ratings yet.</p>
               </div>
               
@@ -391,19 +365,13 @@
                             v-for="star in 5" 
                             :key="star" 
                             :class="[
-                              star <= rating.stars ? 'fas fa-star text-warning' : 'far fa-star text-muted'
+                              star <= rating.stars ? 'bi bi-star-fill text-warning' : 'bi bi-star text-muted'
                             ]"
                           ></i>
                         </div>
                         <p class="mb-0">{{ rating.comment }}</p>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div v-if="userRatings.length > 3" class="text-center mt-3">
-                    <button class="btn btn-outline-primary btn-sm">
-                      View All Reviews
-                    </button>
                   </div>
                 </div>
               </div>
@@ -480,8 +448,21 @@
       <div class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true" ref="toast">
         <div class="d-flex">
           <div class="toast-body">
-            <i class="fas fa-check-circle me-2"></i>
-            Profile updated successfully!
+            <i class="bi bi-check-circle-fill me-2"></i>
+            {{ toastMessage }}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error Toast -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+      <div class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true" ref="errorToast">
+        <div class="d-flex">
+          <div class="toast-body">
+            <i class="bi bi-exclamation-circle-fill me-2"></i>
+            {{ errorMessage }}
           </div>
           <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
@@ -492,69 +473,29 @@
 
 <script>
 import { Modal, Toast } from 'bootstrap';
+import axios from 'axios';
+
+// API URL base - should match your backend
+const API_URL = 'http://localhost:5001';
 
 export default {
   name: 'ProfilePage',
   data() {
     return {
+      loading: true,
+      error: null,
       isEditing: false,
       user: {
-        fullName: 'John Doe',
-        username: 'johndoe',
-        email: 'john.doe@example.com',
-        phone: '+1 (123) 456-7890',
-        preferredContactMethod: 'email',
-        title: 'Deal Enthusiast',
-        location: 'New York, NY',
-        avatar: '/api/placeholder/150/150',
-        memberSince: 'Jan 2023',
-        dealsCompleted: 25,
-        paymentMethods: [
-          {
-            type: 'card',
-            name: 'Personal Visa',
-            lastFour: '4242',
-            expiryDate: '09/27',
-            default: true
-          },
-          {
-            type: 'paypal',
-            identifier: 'john.doe@example.com',
-            default: false
-          }
-        ]
+        uid: '',
+        name: '',
+        rating: 0,
+        accnum: '',
+        phone: ''
       },
       editedUser: {}, // Will be populated with user data when editing starts
       validationErrors: {},
-      userRatings: [
-        {
-          stars: 5,
-          comment: "Great experience! John was responsive and the deal was exactly as described.",
-          date: "2025-03-15T14:30:00Z",
-          rater: {
-            name: "Alice Smith",
-            avatar: "/api/placeholder/40/40"
-          }
-        },
-        {
-          stars: 4,
-          comment: "Good communication and easy to work with. Would recommend.",
-          date: "2025-03-10T11:15:00Z",
-          rater: {
-            name: "Bob Johnson",
-            avatar: "/api/placeholder/40/40"
-          }
-        },
-        {
-          stars: 5,
-          comment: "Very professional! The transaction was smooth and John was very helpful.",
-          date: "2025-03-01T09:45:00Z",
-          rater: {
-            name: "Emma Wilson",
-            avatar: "/api/placeholder/40/40"
-          }
-        }
-      ],
+      userRatings: [],
+      paymentMethods: [],
       newPayment: {
         type: 'card',
         name: '',
@@ -564,17 +505,62 @@ export default {
         default: false
       },
       paymentModal: null,
-      toast: null
+      toastMessage: 'Profile updated successfully!',
+      errorMessage: 'An error occurred. Please try again.',
+      toast: null,
+      errorToast: null
     };
   },
   computed: {
-    averageRating() {
-      if (this.userRatings.length === 0) return 0;
-      const sum = this.userRatings.reduce((total, rating) => total + rating.stars, 0);
-      return sum / this.userRatings.length;
+    currentUserId() {
+      // Get the user ID from route params or from session/localStorage
+      return this.$route.params.uid || localStorage.getItem('uid');
     }
   },
   methods: {
+    // Fetch user profile data from API
+    async fetchUserProfile() {
+      this.loading = true;
+      this.error = null;
+      
+      try {
+        // First check if user is authenticated
+        const authResponse = await axios.get(`${API_URL}/check-auth`, { withCredentials: true });
+        
+        if (authResponse.data.code === 200 && authResponse.data.data.authenticated) {
+          const userId = this.currentUserId || authResponse.data.data.uid;
+          
+          // If authenticated, fetch user profile
+          const response = await axios.get(`${API_URL}/user/${userId}`, { withCredentials: true });
+          
+          if (response.data.code === 200) {
+            this.user = response.data.data.user;
+            
+            // Also fetch phone number if not included in the main profile
+            try {
+              const phoneResponse = await axios.get(`${API_URL}/user/getPhoneFromUser/${userId}`, { withCredentials: true });
+              if (phoneResponse.data.code === 200) {
+                this.user.phone = phoneResponse.data.data.phone;
+              }
+            } catch (phoneErr) {
+              console.error('Error fetching phone:', phoneErr);
+            }
+          } else {
+            this.error = response.data.message || 'Failed to load user profile';
+          }
+        } else {
+          // User not authenticated
+          this.error = 'You are not logged in. Please log in to view your profile.';
+        }
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+        this.error = 'Unable to load profile. Please try again later.';
+      } finally {
+        this.loading = false;
+      }
+    },
+    
+    // Toggle edit mode
     toggleEditMode() {
       if (this.isEditing) {
         // Save changes
@@ -583,57 +569,62 @@ export default {
         }
       } else {
         // Enter edit mode
-        this.editedUser = JSON.parse(JSON.stringify(this.user)); // Deep copy
+        this.editedUser = {...this.user}; // Copy user data
         this.isEditing = true;
       }
     },
+    
+    // Validate form before saving
     validateForm() {
       this.validationErrors = {};
       let isValid = true;
       
-      // Validate full name
-      if (!this.editedUser.fullName.trim()) {
-        this.validationErrors.fullName = "Full name is required";
-        isValid = false;
-      }
-      
-      // Validate username
-      if (!this.editedUser.username.trim()) {
-        this.validationErrors.username = "Username is required";
-        isValid = false;
-      } else if (this.editedUser.username.includes(' ')) {
-        this.validationErrors.username = "Username cannot contain spaces";
-        isValid = false;
-      }
-      
-      // Validate email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!this.editedUser.email.trim()) {
-        this.validationErrors.email = "Email is required";
-        isValid = false;
-      } else if (!emailRegex.test(this.editedUser.email)) {
-        this.validationErrors.email = "Please enter a valid email address";
+      // Validate name
+      if (!this.editedUser.name || !this.editedUser.name.trim()) {
+        this.validationErrors.name = "Name is required";
         isValid = false;
       }
       
       // Validate phone (optional but must be valid if provided)
-      if (this.editedUser.phone.trim() && !/^\+?[0-9\s\-()]{7,20}$/.test(this.editedUser.phone)) {
+      if (this.editedUser.phone && !/^\+?[0-9\s\-()]{7,20}$/.test(this.editedUser.phone)) {
         this.validationErrors.phone = "Please enter a valid phone number";
         isValid = false;
       }
       
       return isValid;
     },
-    saveChanges() {
-      // In a real app, this would send data to an API
-      this.user = JSON.parse(JSON.stringify(this.editedUser));
-      this.isEditing = false;
-      
-      // Show success toast
-      if (this.toast) {
-        this.toast.show();
+    
+    // Save changes to API
+    async saveChanges() {
+      try {
+        // For now, we'll just update the phone number since that's what the API supports
+        if (this.user.phone !== this.editedUser.phone) {
+          // Here you would make an API call to update the phone number
+          // Since there's no update endpoint in the provided API, this is a placeholder
+          
+          // Simulate API call
+          this.user.phone = this.editedUser.phone;
+          this.isEditing = false;
+          
+          // Show success toast
+          this.toastMessage = 'Profile updated successfully!';
+          if (this.toast) {
+            this.toast.show();
+          }
+        } else {
+          // No changes were made
+          this.isEditing = false;
+        }
+      } catch (err) {
+        console.error('Error saving profile changes:', err);
+        this.errorMessage = 'Failed to save changes. Please try again.';
+        if (this.errorToast) {
+          this.errorToast.show();
+        }
       }
     },
+    
+    // Handle profile photo change
     handleProfilePhotoChange(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -651,6 +642,29 @@ export default {
       };
       reader.readAsDataURL(file);
     },
+    
+    // Rating utility methods
+    getRatingCount(stars) {
+      return this.userRatings.filter(rating => rating.stars === stars).length;
+    },
+    
+    getRatingPercentage(stars) {
+      if (this.userRatings.length === 0) return 0;
+      const count = this.getRatingCount(stars);
+      return (count / this.userRatings.length) * 100;
+    },
+    
+    formatDate(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    },
+    
+    // Payment methods management
     addNewPaymentMethod() {
       // Reset new payment form
       this.newPayment = {
@@ -667,11 +681,13 @@ export default {
         this.paymentModal.show();
       }
     },
+    
     closePaymentModal() {
       if (this.paymentModal) {
         this.paymentModal.hide();
       }
     },
+    
     saveNewPaymentMethod() {
       // Validate the payment method
       let isValid = true;
@@ -690,60 +706,87 @@ export default {
       
       // If this is set as default, clear other defaults
       if (this.newPayment.default) {
-        this.editedUser.paymentMethods.forEach(method => {
+        this.paymentMethods.forEach(method => {
           method.default = false;
         });
       }
       
       // Add new payment method
-      this.editedUser.paymentMethods.push({...this.newPayment});
+      this.paymentMethods.push({...this.newPayment});
+      
+      // In a real application, you would save this to your backend
+      // For example:
+      // await axios.post(`${API_URL}/user/${this.user.uid}/payment-methods`, 
+      //   { paymentMethod: this.newPayment }, 
+      //   { withCredentials: true }
+      // );
+      
+      // Show success toast
+      this.toastMessage = 'Payment method added successfully!';
+      if (this.toast) {
+        this.toast.show();
+      }
       
       // Close modal
       this.closePaymentModal();
     },
+    
     removePaymentMethod(index) {
       // Check if it's the default method
-      const isDefault = this.editedUser.paymentMethods[index].default;
+      const isDefault = this.paymentMethods[index].default;
       
       // Remove the payment method
-      this.editedUser.paymentMethods.splice(index, 1);
+      this.paymentMethods.splice(index, 1);
       
       // If it was the default and there are other methods, set the first one as default
-      if (isDefault && this.editedUser.paymentMethods.length > 0) {
-        this.editedUser.paymentMethods[0].default = true;
+      if (isDefault && this.paymentMethods.length > 0) {
+        this.paymentMethods[0].default = true;
+      }
+      
+      // In a real application, you would update this on your backend
+      
+      // Show success toast
+      this.toastMessage = 'Payment method removed successfully!';
+      if (this.toast) {
+        this.toast.show();
       }
     },
+    
     setDefaultPayment(index) {
       // If this method is being set as default
-      if (this.editedUser.paymentMethods[index].default) {
+      if (this.paymentMethods[index].default) {
         // Clear the default flag on all other methods
-        this.editedUser.paymentMethods.forEach((method, i) => {
+        this.paymentMethods.forEach((method, i) => {
           if (i !== index) {
             method.default = false;
           }
         });
       } else {
         // If this was the only default and it's being unset, we need at least one default
-        const hasOtherDefault = this.editedUser.paymentMethods.some((method, i) => i !== index && method.default);
-        if (!hasOtherDefault) {
+        const hasOtherDefault = this.paymentMethods.some((method, i) => i !== index && method.default);
+        if (!hasOtherDefault && this.paymentMethods.length > 0) {
           // Keep this as default if there's no other default
-          this.editedUser.paymentMethods[index].default = true;
+          this.paymentMethods[index].default = true;
           alert("You must have at least one default payment method");
         }
       }
+      
+      // In a real application, you would update this on your backend
     },
+    
     getPaymentIcon(type) {
       switch (type) {
         case 'card':
-          return 'fas fa-credit-card';
+          return 'bi bi-credit-card';
         case 'paypal':
-          return 'fab fa-paypal';
+          return 'bi bi-paypal';
         case 'bankAccount':
-          return 'fas fa-university';
+          return 'bi bi-bank';
         default:
-          return 'fas fa-money-bill-alt';
+          return 'bi bi-cash-stack';
       }
     },
+    
     getPaymentTypeLabel(type) {
       switch (type) {
         case 'card':
@@ -756,25 +799,32 @@ export default {
           return 'Other';
       }
     },
-    getRatingCount(stars) {
-      return this.userRatings.filter(rating => rating.stars === stars).length;
-    },
-    getRatingPercentage(stars) {
-      if (this.userRatings.length === 0) return 0;
-      const count = this.getRatingCount(stars);
-      return (count / this.userRatings.length) * 100;
-    },
-    formatDate(dateString) {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
-      });
+    
+    // Log out user
+    async logout() {
+      try {
+        const response = await axios.post(`${API_URL}/logout`, {}, { withCredentials: true });
+        
+        if (response.data.code === 200) {
+          // Clear local storage or any other client-side storage
+          localStorage.removeItem('uid');
+          
+          // Redirect to login page
+          this.$router.push('/login');
+        }
+      } catch (err) {
+        console.error('Error during logout:', err);
+        this.errorMessage = 'Failed to log out. Please try again.';
+        if (this.errorToast) {
+          this.errorToast.show();
+        }
+      }
     }
   },
   mounted() {
+    // Fetch user profile when component mounts
+    this.fetchUserProfile();
+    
     // Initialize Bootstrap components
     if (this.$refs.paymentModal) {
       this.paymentModal = new Modal(this.$refs.paymentModal);
@@ -786,6 +836,25 @@ export default {
         delay: 3000
       });
     }
+    
+    if (this.$refs.errorToast) {
+      this.errorToast = new Toast(this.$refs.errorToast, {
+        autohide: true,
+        delay: 4000
+      });
+    }
+    
+    // Demo data for payment methods - in a real app, this would come from your API
+    // Remove this when you have a real API endpoint for payment methods
+    this.paymentMethods = [
+      {
+        type: 'card',
+        name: 'Personal Visa',
+        lastFour: '4242',
+        expiryDate: '09/27',
+        default: true
+      }
+    ];
   }
 };
 </script>
@@ -817,20 +886,6 @@ export default {
   font-size: 1rem;
   color: #ffc107;
   letter-spacing: 2px;
-}
-
-.payment-method {
-  transition: all 0.2s ease;
-}
-
-.payment-method:hover {
-  background-color: #f8f9fa;
-}
-
-.payment-icon {
-  width: 40px;
-  text-align: center;
-  color: #6c757d;
 }
 
 .user-avatar img {
