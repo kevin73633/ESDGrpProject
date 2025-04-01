@@ -139,7 +139,7 @@
             
             try {
             // API call to confirm the deal based on confirm_deal.py
-            const response = await axios.post(`${CONFIRM_DEAL_API_URL}/${this.dealId}`);
+            const response = await axios.post(`${CONFIRM_DEAL_API_URL}/${this.dealId}/${this.userId}`);
             if (response.data.code === 200) {
                 this.$emit('deal-confirmed', response.data.data);
                 this.closeModal();
