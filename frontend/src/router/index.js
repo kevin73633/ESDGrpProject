@@ -24,7 +24,7 @@ const routes = [
     component: Login,
   },
   {
-    path: '/deal/:id',
+    path: '/product/:id',
     name: 'dealDetails',
     component: DealDetails,
     props: true,

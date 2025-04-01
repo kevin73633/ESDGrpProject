@@ -16,6 +16,13 @@
       <h5 class="mt-3">Categories</h5>
       <div class="category-list">
         <button 
+          class="category-item"
+          :class="{ 'active': selectedCategory === '' }"
+          @click="filterByCategory('')"
+        >
+          All
+        </button>
+        <button 
           v-for="category in categories" 
           :key="category.id"
           :class="['category-item', selectedCategory === category.id ? 'active' : '']"
@@ -26,8 +33,22 @@
       </div>
     </section>
 
+    <!-- Loading Indicator -->
+    <div v-if="loading" class="text-center my-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-2">Loading products...</p>
+    </div>
+
+    <!-- Error Message -->
+    <div v-else-if="error" class="alert alert-danger my-3" role="alert">
+      <i class="fas fa-exclamation-circle me-2"></i>
+      {{ error }}
+    </div>
+
     <!-- Featured Deals -->
-    <section class="featured-deals mt-4">
+    <section v-else class="featured-deals mt-4">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0">{{ selectedCategory ? `${getCategoryName(selectedCategory)} Deals` : 'Featured Deals' }}</h5>
         <div class="dropdown">
@@ -36,34 +57,34 @@
           </button>
           <ul class="dropdown-menu" aria-labelledby="sortDropdown">
             <li><a class="dropdown-item" href="#" @click.prevent="sortDeals('newest')">Newest</a></li>
-            <li><a class="dropdown-item" href="#" @click.prevent="sortDeals('popular')">Most Popular</a></li>
+            <li><a class="dropdown-item" href="#" @click.prevent="sortDeals('price-low')">Price: Low to High</a></li>
+            <li><a class="dropdown-item" href="#" @click.prevent="sortDeals('price-high')">Price: High to Low</a></li>
             <li><a class="dropdown-item" href="#" @click.prevent="sortDeals('title')">Alphabetical</a></li>
           </ul>
         </div>
       </div>
       
-      <div v-if="filteredDeals.length === 0" class="alert alert-info">
+      <div v-if="filteredProducts.length === 0" class="alert alert-info">
         No deals found matching your criteria. Try a different search or category.
       </div>
       
       <div class="deal-list">
-        <div class="deal-item" v-for="deal in filteredDeals" :key="deal.id">
+        <div class="deal-item" v-for="product in filteredProducts" :key="product.productid">
           <div class="position-relative">
-            <img :src="deal.image || '/api/placeholder/300/150'" alt="deal-image" class="deal-image">
-            <span class="deal-badge">{{ formatTimeAgo(deal.createdAt) }}</span>
+            <img :src="getProductImage(product)" alt="deal-image" class="deal-image">
+            <span class="deal-badge">{{ formatTimeAgo(product.created_at) }}</span>
           </div>
           <div class="deal-info">
-            <h6 class="deal-title">{{ deal.title }}</h6>
+            <h6 class="deal-title">{{ product.title }}</h6>
             <div class="d-flex justify-content-between align-items-center mb-2">
-              <span class="badge rounded-pill text-bg-light">{{ getCategoryName(deal.category) }}</span>
-              <small class="text-muted">{{ deal.location }}</small>
+              <span class="badge rounded-pill text-bg-light">{{ product.category }}</span>
+              <small class="text-muted">{{ product.location }}</small>
             </div>
-            <p class="deal-description">{{ deal.description }}</p>
+            <p class="deal-description">{{ product.description }}</p>
             <div class="d-flex justify-content-between align-items-center">
-              <button class="btn btn-primary" @click="viewDealDetails(deal.id)">View Deal</button>
-              <div>
-                <i class="far fa-heart me-1"></i>
-                <span>{{ deal.likes || 0 }}</span>
+              <button class="btn btn-primary" @click="viewProductDetails(product.productid)">View Deal</button>
+              <div class="price-display">
+                <strong>${{ formatPrice(product.price) }}</strong>
               </div>
             </div>
           </div>
@@ -254,12 +275,34 @@
         </div>
       </div>
     </div>
+
+    <!-- Error Alert -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 5">
+      <div 
+        class="toast align-items-center text-white bg-danger border-0" 
+        role="alert" 
+        aria-live="assertive" 
+        aria-atomic="true"
+        ref="errorToast"
+      >
+        <div class="d-flex">
+          <div class="toast-body">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            {{ errorMessage }}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import axios from 'axios';
 import { Modal, Toast } from 'bootstrap'; // Import Bootstrap components
+
+// Define API URL
+const PRODUCT_API_URL = 'http://localhost:5005'; // Using your product.py API port
 
 export default {
   name: 'HomePage',
@@ -268,6 +311,10 @@ export default {
       searchQuery: "",
       selectedCategory: "",
       sortOption: "newest",
+      loading: true,
+      error: null,
+      products: [],
+      errorMessage: "An error occurred. Please try again.",
       categories: [
         { id: "electronics", name: "Electronics" },
         { id: "fashion", name: "Fashion" },
@@ -275,78 +322,6 @@ export default {
         { id: "services", name: "Services" },
         { id: "books", name: "Books" },
         { id: "furniture", name: "Furniture" }
-      ],
-      deals: [
-        { 
-          id: 1, 
-          title: "1-for-1 Bubble Tea", 
-          category: "food", 
-          description: "Looking for someone to share a bubble tea deal. Valid at all outlets until end of month.", 
-          image: "/api/placeholder/300/150", 
-          location: "Downtown",
-          price: "5.00",
-          likes: 24,
-          createdAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-          expiresAt: new Date(Date.now() + 604800000).toISOString(), // 7 days from now
-          terms: [
-            "Valid only at participating outlets",
-            "Cannot be combined with other promotions",
-            "Valid until end of month"
-          ],
-          user: {
-            name: "Jane Doe",
-            avatar: "/api/placeholder/50/50",
-            joinDate: "2023-01-15"
-          }
-        },
-        // { 
-        //   id: 2, 
-        //   title: "Donut Box for $15", 
-        //   category: "food", 
-        //   description: "Need someone to share a box of donuts. 12 pieces of assorted flavors.", 
-        //   image: "/api/placeholder/300/150", 
-        //   location: "North Campus",
-        //   price: "15.00",
-        //   likes: 18,
-        //   createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-        //   user: {
-        //     name: "John Smith",
-        //     avatar: "/api/placeholder/50/50",
-        //     joinDate: "2022-11-20"
-        //   }
-        // },
-        // { 
-        //   id: 3, 
-        //   title: "50% Off Bluetooth Earbuds", 
-        //   category: "electronics", 
-        //   description: "I have a coupon for 50% off wireless earbuds at TechStore. Looking to share with someone.", 
-        //   image: "/api/placeholder/300/150", 
-        //   location: "East Mall",
-        //   price: "25.00",
-        //   likes: 32,
-        //   createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-        //   user: {
-        //     name: "Mike Johnson",
-        //     avatar: "/api/placeholder/50/50",
-        //     joinDate: "2023-02-05"
-        //   }
-        // },
-        // { 
-        //   id: 4, 
-        //   title: "Buy 2 Get 1 Free Books", 
-        //   category: "books", 
-        //   description: "Bookstore promotion, buy 2 books and get 1 free. Let's pool together to maximize the deal.", 
-        //   image: "/api/placeholder/300/150", 
-        //   location: "Central Library",
-        //   price: "30.00",
-        //   likes: 15,
-        //   createdAt: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
-        //   user: {
-        //     name: "Sarah Williams",
-        //     avatar: "/api/placeholder/50/50",
-        //     joinDate: "2023-01-10"
-        //   }
-        // }
       ],
       newDeal: {
         title: "",
@@ -361,34 +336,41 @@ export default {
       validationErrors: {},
       isSubmitting: false,
       modalInstance: null,
-      toastInstance: null
+      successToast: null,
+      errorToast: null
     };
   },
   computed: {
-    filteredDeals() {
-      let result = [...this.deals];
+    filteredProducts() {
+      let result = [...this.products];
       
       // Filter by category if selected
       if (this.selectedCategory) {
-        result = result.filter(deal => deal.category === this.selectedCategory);
+        result = result.filter(product => 
+          product.category.toLowerCase() === this.selectedCategory.toLowerCase()
+        );
       }
       
       // Filter by search query
       if (this.searchQuery.trim()) {
         const query = this.searchQuery.toLowerCase();
-        result = result.filter(deal => 
-          deal.title.toLowerCase().includes(query) || 
-          deal.description.toLowerCase().includes(query)
+        result = result.filter(product => 
+          product.title.toLowerCase().includes(query) || 
+          product.description.toLowerCase().includes(query) ||
+          product.location.toLowerCase().includes(query)
         );
       }
       
-      // Sort deals based on selected option
+      // Sort products based on selected option
       switch (this.sortOption) {
         case 'newest':
-          result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
           break;
-        case 'popular':
-          result.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+        case 'price-low':
+          result.sort((a, b) => a.price - b.price);
+          break;
+        case 'price-high':
+          result.sort((a, b) => b.price - a.price);
           break;
         case 'title':
           result.sort((a, b) => a.title.localeCompare(b.title));
@@ -396,18 +378,90 @@ export default {
       }
       
       return result;
+    },
+    currentUserId() {
+      // Get user ID from localStorage or session
+      return localStorage.getItem('uid') || '';
     }
   },
-  mounted() {
-    axios.get("http://127.0.0.1:5001/user", { withCredentials: true })
-    .then((response) => {
-      console.log(response);
-    }, (error) => {
-      console.log(error);
-    });
-    },
+  async mounted() {
+    // Initialize Bootstrap components
+    if (this.$refs.dealModal) {
+      this.modalInstance = new Modal(this.$refs.dealModal);
+    }
+    
+    if (this.$refs.successToast) {
+      this.successToast = new Toast(this.$refs.successToast, {
+        autohide: true,
+        delay: 3000
+      });
+    }
+    
+    if (this.$refs.errorToast) {
+      this.errorToast = new Toast(this.$refs.errorToast, {
+        autohide: true,
+        delay: 4000
+      });
+    }
+    
+    // Fetch products when component mounts
+    await this.fetchProducts();
+  },
   methods: {
+    // Fetch products from API
+    async fetchProducts() {
+      this.loading = true;
+      this.error = null;
+      try {
+        const response = await axios.get(`${PRODUCT_API_URL}/products`);
+        
+        if (response.data.code === 200) {
+          this.products = response.data.data.products;
+          
+          // Extract unique categories from the products
+          const uniqueCategories = [...new Set(this.products.map(product => product.category))];
+          
+          // Update categories array if we have categories from the API
+          if (uniqueCategories.length > 0) {
+            this.categories = uniqueCategories.map(category => ({
+              id: category.toLowerCase(),
+              name: category
+            }));
+          }
+        } else {
+          this.error = response.data.message || 'Failed to load products';
+        }
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        this.error = 'Unable to load products. Please try again later.';
+      } finally {
+        this.loading = false;
+      }
+    },
+    
+    // Get product image or fallback to placeholder
+    getProductImage(product) {
+      // Check if product has an image property
+      // If not, return a placeholder
+      return product.image || `/api/placeholder/300/150`;
+    },
+    
+    // Format price to 2 decimal places
+    formatPrice(price) {
+      return parseFloat(price).toFixed(2);
+    },
+    
     openModal() {
+      // Check if user is logged in first
+      if (!this.currentUserId) {
+        // Redirect to login page or show login modal
+        this.errorMessage = "Please log in to post a deal";
+        if (this.errorToast) {
+          this.errorToast.show();
+        }
+        return;
+      }
+      
       // Reset form data and validation errors
       this.newDeal = {
         title: "",
@@ -422,11 +476,8 @@ export default {
       this.validationErrors = {};
       
       // Show the modal
-      if (this.$refs.dealModal) {
-        const modalElement = this.$refs.dealModal;
-        const modalInstance = new Modal(modalElement);
-        modalInstance.show();
-        this.modalInstance = modalInstance;
+      if (this.modalInstance) {
+        this.modalInstance.show();
       }
     },
     closeModal() {
@@ -462,9 +513,18 @@ export default {
       const fileInput = document.getElementById('dealImage');
       if (fileInput) fileInput.value = "";
     },
-    submitDeal() {
+    async submitDeal() {
       // Reset validation errors
       this.validationErrors = {};
+      
+      // Check if user is logged in
+      if (!this.currentUserId) {
+        this.errorMessage = "Please log in to post a deal";
+        if (this.errorToast) {
+          this.errorToast.show();
+        }
+        return;
+      }
       
       // Validate form data
       let isValid = true;
@@ -508,54 +568,59 @@ export default {
       // Show loading state
       this.isSubmitting = true;
       
-      // Simulate API call with a timeout
-      setTimeout(() => {
-        const newDealId = this.deals.length + 1;
-        
-        // Create a new deal object
-        const dealToAdd = {
-          id: newDealId,
+      try {
+        // Prepare data for API
+        const productData = {
           title: this.newDeal.title,
-          category: this.newDeal.category,
+          category: this.getCategoryName(this.newDeal.category), // Convert ID to name
           description: this.newDeal.description,
           location: this.newDeal.location,
-          price: this.newDeal.price,
-          image: this.newDeal.imagePreview || "/api/placeholder/300/150",
-          createdAt: new Date().toISOString(),
-          likes: 0,
-          expiresAt: this.newDeal.expiresAt || null,
-          user: {
-            name: "Current User", // In a real app, get the logged-in user
-            avatar: "/api/placeholder/50/50",
-            joinDate: new Date().toISOString().split('T')[0]
-          }
+          price: parseFloat(this.newDeal.price),
+          userid: this.currentUserId,
+          expires_at: this.newDeal.expiresAt || null
         };
         
-        // Add the new deal to the list
-        this.deals.unshift(dealToAdd);
+        // POST to API
+        const response = await axios.post(`${PRODUCT_API_URL}/products`, productData);
         
-        // Hide the modal
-        this.closeModal();
-        
-        // Reset submission state
+        if (response.data.code === 201) {
+          // Product created successfully
+          
+          // Get the new product from response
+          const newProduct = response.data.data;
+          
+          // Add to products list and refresh view
+          this.products.unshift(newProduct);
+          
+          // Hide the modal
+          this.closeModal();
+          
+          // Show success toast
+          if (this.successToast) {
+            this.successToast.show();
+          }
+          
+          // Optionally redirect to the product details
+          // this.$router.push({ name: 'productDetails', params: { id: newProduct.productid.toString() } });
+        } else {
+          // Show error for unexpected success response
+          this.errorMessage = response.data.message || 'Failed to create product';
+          if (this.errorToast) {
+            this.errorToast.show();
+          }
+        }
+      } catch (err) {
+        console.error('Error creating product:', err);
+        this.errorMessage = err.response?.data?.message || 'Failed to create product';
+        if (this.errorToast) {
+          this.errorToast.show();
+        }
+      } finally {
         this.isSubmitting = false;
-        
-        // Show success toast
-        this.showSuccessToast();
-        
-        // Redirect to the newly created deal
-        this.$router.push({ name: 'dealDetails', params: { id: newDealId.toString() } });
-      }, 1500); // Simulate 1.5s processing time
-    },
-    showSuccessToast() {
-      if (this.$refs.successToast) {
-        const toastElement = this.$refs.successToast;
-        const toast = new Toast(toastElement);
-        toast.show();
       }
     },
     performSearch() {
-      // You could implement additional search logic here if needed
+      // Just use the reactive filtering in the computed property
       console.log(`Searching for: ${this.searchQuery}`);
     },
     filterByCategory(categoryId) {
@@ -569,12 +634,19 @@ export default {
     sortDeals(option) {
       this.sortOption = option;
     },
-    viewDealDetails(dealId) {
-      this.$router.push({ name: 'dealDetails', params: { id: dealId.toString() } });
+    viewProductDetails(productId) {
+      // Navigate to product details page
+      this.$router.push({ path: `/product/${productId}` });
     },
     formatTimeAgo(dateString) {
+      if (!dateString) return 'N/A';
+      
       const date = new Date(dateString);
       const now = new Date();
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) return 'N/A';
+      
       const diffMs = now - date;
       const diffSec = Math.floor(diffMs / 1000);
       const diffMin = Math.floor(diffSec / 60);
@@ -595,19 +667,6 @@ export default {
     getCategoryName(categoryId) {
       const category = this.categories.find(c => c.id === categoryId);
       return category ? category.name : categoryId;
-    }
-  },
-  created() {
-    // Save deals to localStorage for sharing with DealDetails component
-    localStorage.setItem('deals', JSON.stringify(this.deals));
-  },
-  watch: {
-    deals: {
-      handler(newDeals) {
-        // Update localStorage when deals change
-        localStorage.setItem('deals', JSON.stringify(newDeals));
-      },
-      deep: true
     }
   }
 };
@@ -745,6 +804,13 @@ export default {
 .image-preview-container {
   display: flex;
   justify-content: center;
+}
+
+.price-display {
+  background-color: #f8f9fa;
+  padding: 5px 10px;
+  border-radius: 5px;
+  color: #212529;
 }
 
 @media (max-width: 768px) {
