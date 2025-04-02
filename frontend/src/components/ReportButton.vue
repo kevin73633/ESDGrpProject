@@ -39,6 +39,8 @@
 </template>
 
 <script>
+const REPORT_USER_API_URL = 'http://localhost:5300/report_user'; 
+import axios from 'axios';
 export default {
   name: 'ReportButton',
   props: {
@@ -49,7 +51,11 @@ export default {
     currentUserId: {
       type: String,
       required: true
-    }
+    },
+    dealId: {
+      type: [Number, String],
+      required: true
+    },
   },
   data() {
     return {
@@ -80,18 +86,12 @@ export default {
       
       try {
         // API call to submit the report
-        const response = await fetch('/api/reports', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            UserID: this.currentUserId,
+        const response = await axios.post(`${REPORT_USER_API_URL}`, {
+          UserID: this.currentUserId,
             ReportedUserID: this.reportedUserId,
+            dealId: this.dealId,
             Reason: this.finalReason,
-            Status: 'Pending'
-          })
-        });
+            });
         
         if (response.ok) {
           this.$emit('report-submitted', await response.json());

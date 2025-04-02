@@ -84,6 +84,7 @@
                   v-if="canShowReportButton"
                   :reported-user-id="getOtherUserId()"
                   :current-user-id="currentUserId"
+                  :deal-id="currentDeal.id"
                   @report-submitted="handleReportSubmitted"
                   @show-notification="showNotification"
                 />
@@ -331,6 +332,7 @@ export default {
     
     // Determine if we can show the report button
     canShowReportButton() {
+      if (!this.currentDeal) return false;
       return this.selectedChatUserId && this.currentUserId && this.selectedChatUserId !== this.currentUserId;
     }
   },
