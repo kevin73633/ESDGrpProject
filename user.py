@@ -238,6 +238,47 @@ def logout():
             "code": 500,
             "message": f"An error occurred during logout: {str(e)}"
         }), 500
+@app.route("/user/<string:uid>/rating", methods=['PUT'])
+def update_user_rating(uid):
+    user = db.session.scalar(db.select(User).filter_by(uid=uid))
+    
+    if not user:
+        return jsonify(
+            {
+                "code": 404,
+                "message": "user not found."
+            }
+        ), 404
+    
+    data = request.get_json()
+    if 'rating' not in data:
+        return jsonify(
+            {
+                "code": 400,
+                "message": "rating is required."
+            }
+        ), 400
+    
+    try:
+        old_status = user.rating
+        user.rating = data['rating']
+        db.session.commit()
+        
+        return jsonify(
+            {
+                "code": 200,
+                "data": user.json(),
+                "message": "Deal status updated successfully."
+            }
+        )
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(
+            {
+                "code": 500,
+                "message": f"An error occurred updating the deal status. {str(e)}"
+            }
+        ), 500
 
 # @app.route("/order/<string:order_id>")
 # def find_by_order_id(uid):

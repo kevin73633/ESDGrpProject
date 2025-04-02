@@ -114,8 +114,6 @@ def get_single_deal(dealid):
 # 2 = confirmed seller side
 # 3 = confirmed both sides
 # 4 = verified buyer side
-# 5 = verified seller side
-# 6 = verified both sides
 @app.route("/deal/<string:dealid>/status", methods=['PUT'])
 def update_deal_status(dealid):
     deal = db.session.scalar(db.select(Deal).filter_by(dealid=dealid))

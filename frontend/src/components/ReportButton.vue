@@ -93,8 +93,8 @@ export default {
             Reason: this.finalReason,
             });
         
-        if (response.ok) {
-          this.$emit('report-submitted', await response.json());
+        if (response.data.code === 200) {
+          this.$emit('report-submitted', response.data);
           this.closeModal();
           this.$emit('show-notification', {
             message: 'Report submitted successfully',

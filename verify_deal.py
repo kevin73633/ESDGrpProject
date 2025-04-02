@@ -23,7 +23,8 @@ DEAL_SERVICE_URL = "http://deal:5020"
 PRODUCT_SERVICE_URL = "http://product:5005"
 USER_SERVICE_URL = "http://user:5001"
 PAYMENT_SERVICE_URL = "http://payment:5031"
-RATING_SERVICE_URL = "https://personal-nzmfqiqp.outsystemscloud.com/RatingAPI_REST/rest/v1/updateuserrating/?DealID="
+RATING_SERVICE_POST_URL = "https://personal-nzmfqiqp.outsystemscloud.com/RatingAPI_REST/rest/v1/updateuserrating/?DealID="
+RATING_SERVICE_GET_URL = "https://personal-nzmfqiqp.outsystemscloud.com/RatingAPI_REST/rest/v1/userRating/RatedID/?RatedID="
 
 # AWS Configuration
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
@@ -106,19 +107,18 @@ def verify_deal(dealid):
     if product_result["code"] != 200:return jsonify({"code": 404,"message": f"Product {deal_data['productid']} not found."}), 404
     product_data = product_result["data"]["product"]
     
-    userToFetch = "buyerid"
-    # Step 3: Get buyer information
-    user_result = invoke_http(f"{USER_SERVICE_URL}/user/{deal_data[userToFetch]}", method="GET")
-    if user_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer {deal_data[userToFetch]} not found."}), 404
+    # Step 3: Get seller information
+    user_result = invoke_http(f"{USER_SERVICE_URL}/user/{deal_data["sellerid"]}", method="GET")
+    if user_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer {deal_data["sellerid"]} not found."}), 404
     user_data = user_result["data"]["user"]
 
-    # Get buyer account number
-    user_account_result = invoke_http(f"{USER_SERVICE_URL}/user/getAccNumFromUser/{deal_data[userToFetch]}", method="GET")
+    # Get seller account number
+    user_account_result = invoke_http(f"{USER_SERVICE_URL}/user/getAccNumFromUser/{deal_data["sellerid"]}", method="GET")
     if user_account_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer account information not found."}), 404
     user_account = user_account_result["data"]["AccNum"]
 
-    # Get buyer phone number (assuming you've added the endpoint in user.py)
-    user_phone_result = invoke_http(f"{USER_SERVICE_URL}/user/getPhoneFromUser/{deal_data[userToFetch]}", method="GET")
+    # Get seller phone number
+    user_phone_result = invoke_http(f"{USER_SERVICE_URL}/user/getPhoneFromUser/{deal_data["sellerid"]}", method="GET")
     user_phone = None
     if user_phone_result["code"] == 200:
         user_phone = user_phone_result["data"]["phone"]
@@ -139,7 +139,48 @@ def verify_deal(dealid):
             "code": payment_result["code"],
             "message": f"Payment failed: {payment_result['message']}"
         }), payment_result["code"]
-    # Step 5: Update deal status to verified
+    
+    payment_result_string = payment_result["transaction"]
+    # Step 5: Post rating to the rating service
+    rating_post_payload = {
+        "CreatedAt": datetime.now().isoformat(),
+        "RaterID": deal_data["buyerid"],
+        "RatedID": deal_data["sellerid"],
+        "DealID": dealid,
+        "RatingScore": rating,
+    }
+    rating_post_result = invoke_http(
+        f"{RATING_SERVICE_POST_URL}{dealid}",
+        method="POST",
+        json=rating_post_payload
+    )
+    if rating_post_result["Success"] != True:
+        return jsonify({
+            "code": 404,
+            "message": f"Rating failed: {rating_post_result['ErrorMessage']}"
+        }), 404
+    # Step 6: Get all ratings for the seller
+    rating_get_result = invoke_http(
+        f"{RATING_SERVICE_GET_URL}{deal_data["sellerid"]}",
+        method="GET"
+    )
+    if rating_get_result["Result"]["Success"] != True:
+        return jsonify({
+            "code": 404,
+            "message": f"Rating failed: {rating_get_result['ErrorMessage']}"
+        }), 404
+    # Calculate average rating
+    ratings = rating_get_result["Rating"]
+    total_score = sum(rating["RatingScore"] for rating in ratings)
+    average_rating = total_score / len(ratings) if ratings else 0
+    # Step 7: Update seller rating
+    update_seller_rating_payload = {"rating": average_rating}
+    update_seller_rating_result = invoke_http(
+        f"{USER_SERVICE_URL}/user/{deal_data["sellerid"]}/rating",
+        method="PUT",
+        json=update_seller_rating_payload
+    )
+    # Step 8: Update deal status to verified
     update_deal_payload = {}
     if (deal_data['status'] == 3):
         update_deal_payload = {"status": 4}
@@ -148,25 +189,8 @@ def verify_deal(dealid):
         method="PUT",
         json=update_deal_payload
     )
-    payment_result_string = payment_result["transaction"]
-    rating_payload = {
-        "CreatedAt": datetime.now().isoformat(),
-        "RaterID": deal_data["buyerid"],
-        "RatedID": deal_data["sellerid"],
-        "DealID": dealid,
-        "RatingScore": rating,
-    }
-    rating_result = invoke_http(
-        f"{RATING_SERVICE_URL}{dealid}",
-        method="POST",
-        json=rating_payload
-    )
-    if rating_result["Success"] != True:
-        return jsonify({
-            "code": 404,
-            "message": f"Rating failed: {rating_result['ErrorMessage']}"
-        }), 404
-    
+
+
     if update_deal_result["code"] != 200:
         # Payment was successful but deal status update failed
         # We should implement compensating transaction here (refund)
@@ -174,12 +198,12 @@ def verify_deal(dealid):
             "code": 500,
             "message": f"Deal status update failed: {update_deal_result['message']}"
         }), 500
-    # Step 6: Create notification payload with all relevant information
+    # Step 9: Create notification payload with all relevant information
     notification_payload = {
         "event_type": "deal_verified",
         "timestamp": datetime.now().isoformat(),
         "deal_id": dealid,
-        "rating" : rating_payload,
+        "rating" : rating_post_payload,
         "product": {
             "id": product_data["productid"],
             "title": product_data["title"],
@@ -188,6 +212,7 @@ def verify_deal(dealid):
         "buyer": {
             "id": user_data["uid"],
             "name": user_data["name"],
+            "rating": user_data["rating"],
             "phone": user_phone
         },
         "payment": {
@@ -197,7 +222,7 @@ def verify_deal(dealid):
         }
     }
     
-    # Step 7: Send notifications via AMQP
+    # Step 10: Send notifications via AMQP
     amqp_lib.publish_message(
         routing_key="deal.verified",
         message=notification_payload,
@@ -205,7 +230,7 @@ def verify_deal(dealid):
         hostname=RABBITMQ_HOST
     )
     
-    # Step 8: Send SMS notifications
+    # Step 11: Send SMS notifications
     sms_results = {}
     if user_phone:
         buyer_message = f"Your purchase/sale of {product_data['title']} for ${product_data['price']} has been verified. Deal ID: {dealid}"
@@ -218,7 +243,8 @@ def verify_deal(dealid):
         "data": {
             "deal": update_deal_result["data"],
             "product": product_data,
-            "rating" : rating_payload,
+            "ratingPayload": rating_post_payload,
+            "finalUserRating" : user_data['rating'],
             "payment": payment_result_string,
             "notifications": {
                 "amqp_sent": True,

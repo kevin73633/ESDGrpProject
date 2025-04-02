@@ -23,6 +23,7 @@ DEAL_SERVICE_URL = "http://deal:5020"
 PRODUCT_SERVICE_URL = "http://product:5005"
 USER_SERVICE_URL = "http://user:5001"
 CHAT_SERVICE_URL = "http://chat:5087"
+CHATGPT_SERVICE_URL = "http://chatgpt:5002"
 
 # AWS Configuration
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
@@ -105,7 +106,13 @@ def report_user():
     chat_result = invoke_http(f"{CHAT_SERVICE_URL}/chat/getmessagebetween/{dealid}", method="GET")
     if chat_result["code"] != 200:return jsonify({"code": 404,"message": f"chat in {dealid} not found."}), 404
     chat_data = chat_result["data"]["messages"]
-    print(chat_data)
+
+
+    chatgpt_result = invoke_http(f"{CHATGPT_SERVICE_URL}/analyze", method="POST", json={"message": chat_data})
+    if chatgpt_result["code"] != 200:return jsonify({"code": 404,"message": f"chat in {dealid} not found."}), 404
+    chatgpt_data = chatgpt_result["data"]['is_harmful']
+
+    
     # Step 3: Get buyer information
     user_result = invoke_http(f"{USER_SERVICE_URL}/user/{currentuserid}", method="GET")
     if user_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer {currentuserid} not found."}), 404
@@ -127,6 +134,7 @@ def report_user():
         "buyer": {
             "id": user_data["uid"],
             "name": user_data["name"],
+            "rating": user_data["rating"],
             "phone": user_phone
         },
     }
