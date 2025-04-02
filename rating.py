@@ -28,22 +28,21 @@ def get_all_ratings():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/updateuserrating", methods=["POST"])
-def update_user_rating():
+@app.route("/updateuserrating/<string:dealid>", methods=["POST"])
+def update_user_rating(dealid):
     """Send user rating data to OutSystems API."""
     try:
         data = request.json
-        deal_id = request.args.get("DealID")
-        if not deal_id:
+        if not dealid:
             return jsonify({"error": "DealID query parameter is required"}), 400
 
         response = requests.post(
-            f"{UPDATE_USER_RATING_URL}?DealID={deal_id}", json=data
+            f"{UPDATE_USER_RATING_URL}?DealID={dealid}", json=data
         )
         return jsonify(response.json()), response.status_code
     except requests.exceptions.RequestException as e:
         return jsonify({"error": str(e)}), 500
-
+#https://personal-nzmfqiqp.outsystemscloud.com/RatingAPI_REST/rest/v1/updateuserrating/?DealID=12345678
 
 @app.route("/userRating/<int:RatedID>", methods=["GET"])
 def get_user_rating(RatedID):
@@ -53,7 +52,7 @@ def get_user_rating(RatedID):
         return jsonify(response.json()), response.status_code
     except requests.exceptions.RequestException as e:
         return jsonify({"error": str(e)}), 500
-
+#https://personal-nzmfqiqp.outsystemscloud.com/RatingAPI_REST/rest/v1/userRating/RatedID/?RatedID=12345678
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5003, debug=True)

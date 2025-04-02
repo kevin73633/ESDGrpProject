@@ -219,7 +219,7 @@
           
           try {
             // API call to verify the deal
-            const response = await axios.post(`${VERIFY_DEAL_API_URL}/${this.dealId}/${this.userId}`, {
+            const response = await axios.post(`${VERIFY_DEAL_API_URL}/${this.dealId}`, {
               userId: this.userId,
               rating: this.userRating,
               feedback: this.ratingFeedback

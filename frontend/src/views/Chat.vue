@@ -326,8 +326,7 @@ export default {
     canVerifyReceipt() {
       if (!this.currentDeal) return false;
       return this.currentDeal && 
-             (this.currentUserId == this.currentDeal.buyerId && (this.currentDeal.status == 3 || this.currentDeal.status == 5) || 
-             this.currentUserId == this.currentDeal.sellerId && (this.currentDeal.status == 3 || this.currentDeal.status == 4))
+             (this.currentUserId == this.currentDeal.buyerId && this.currentDeal.status == 3)
     },
     
     // Determine if we can show the report button
