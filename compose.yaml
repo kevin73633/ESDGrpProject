@@ -58,6 +58,31 @@ services:
       RABBITMQ_EXCHANGE: deal_events
     networks:
       - deal-net
+
+  report_user:
+    build:
+      context: ./
+      dockerfile: report_user.Dockerfile
+    image: tshamel/report_user:1.0
+    container_name: report_user
+    restart: always
+    ports:
+      - "5300:5300"
+    depends_on:
+      - deal
+      - product
+      - user
+      - payment
+      - rabbitmq
+    environment:
+      PYTHONUNBUFFERED: 1
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_EXCHANGE: deal_events
+    networks:
+      - deal-net
   
   account:
     build:
