@@ -22,7 +22,7 @@ CORS(app,
 DEAL_SERVICE_URL = "http://deal:5020"
 PRODUCT_SERVICE_URL = "http://product:5005"
 USER_SERVICE_URL = "http://user:5001"
-PAYMENT_SERVICE_URL = "http://payment:5031"
+CHAT_SERVICE_URL = "http://chat:5087"
 
 # AWS Configuration
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
@@ -102,6 +102,10 @@ def report_user():
     currentuserid = request.json['UserID']
     reporteduserid = request.json['ReportedUserID']
 
+    chat_result = invoke_http(f"{CHAT_SERVICE_URL}/chat/getmessagebetween/{dealid}", method="GET")
+    if chat_result["code"] != 200:return jsonify({"code": 404,"message": f"chat in {dealid} not found."}), 404
+    chat_data = chat_result["data"]["messages"]
+    print(chat_data)
     # Step 3: Get buyer information
     user_result = invoke_http(f"{USER_SERVICE_URL}/user/{currentuserid}", method="GET")
     if user_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer {currentuserid} not found."}), 404
