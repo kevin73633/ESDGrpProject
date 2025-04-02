@@ -20,7 +20,6 @@ CORS(app,
 
 # Define microservice URLs
 DEAL_SERVICE_URL = "http://deal:5020"
-PRODUCT_SERVICE_URL = "http://product:5005"
 USER_SERVICE_URL = "http://user:5001"
 CHAT_SERVICE_URL = "http://chat:5087"
 CHATGPT_SERVICE_URL = "http://chatgpt:5002"
