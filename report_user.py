@@ -24,6 +24,9 @@ PRODUCT_SERVICE_URL = "http://product:5005"
 USER_SERVICE_URL = "http://user:5001"
 CHAT_SERVICE_URL = "http://chat:5087"
 CHATGPT_SERVICE_URL = "http://chatgpt:5002"
+REPORTLOG_SERVICE_URL = "http://reportLog:5004"
+RATING_SERVICE_POST_URL = "https://personal-nzmfqiqp.outsystemscloud.com/RatingAPI_REST/rest/v1/updateuserrating"
+RATING_SERVICE_GET_URL = "https://personal-nzmfqiqp.outsystemscloud.com/RatingAPI_REST/rest/v1/userRating/RatedID/?RatedID="
 
 # AWS Configuration
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
@@ -99,7 +102,15 @@ def report_user():
     Report a user by orchestrating the entire user report flow
     """
     # Step 1: Get deal information
+    
     dealid = request.json['dealId']
+
+    deal_result = invoke_http(f"{DEAL_SERVICE_URL}/deal/{dealid}", method="GET")
+    if deal_result["code"] != 200:return jsonify({"code": 404,"message": f"Deal {dealid} not found."}), 404
+    deal_data = deal_result["data"]["deal"]
+
+
+    reason = request.json['Reason']
     currentuserid = request.json['UserID']
     reporteduserid = request.json['ReportedUserID']
 
@@ -107,16 +118,88 @@ def report_user():
     if chat_result["code"] != 200:return jsonify({"code": 404,"message": f"chat in {dealid} not found."}), 404
     chat_data = chat_result["data"]["messages"]
 
-
     chatgpt_result = invoke_http(f"{CHATGPT_SERVICE_URL}/analyze", method="POST", json={"message": chat_data})
     if chatgpt_result["code"] != 200:return jsonify({"code": 404,"message": f"chat in {dealid} not found."}), 404
     chatgpt_data = chatgpt_result["data"]['is_harmful']
 
+    reportLog_post_payload = {
+        "UserID": currentuserid,
+        "ReportedUserID": reporteduserid,
+        "Reason": reason,
+        "Status": chatgpt_data
+    }
+    reportLog_post_result = invoke_http(
+        f"{REPORTLOG_SERVICE_URL}/reportLog",
+        method="POST",
+        json=reportLog_post_payload
+    )
+    if reportLog_post_result["code"] != 200:
+        return jsonify({
+            "code": 404,
+            "message": f"Rating failed: {reportLog_post_result['error']}"
+        }), 404
+    update_deal_payload = {"status": -1}
+    update_deal_result = invoke_http(
+        f"{DEAL_SERVICE_URL}/deal/{dealid}/status",
+        method="PUT",
+        json=update_deal_payload
+    )
+    if chatgpt_data == False:
+        return jsonify({
+            "code": 200,
+            "message": "User report not harmful",
+            "data": {
+                "is_harmful": chatgpt_data
+            }
+        })
+    # Step 5: Post rating to the rating service
+    rating_post_payload = {
+        "CreatedAt": datetime.now().isoformat(),
+        "RaterID": currentuserid,
+        "RatedID": reporteduserid,
+        "DealID": dealid,
+        "RatingScore": 0,
+        "RatingType": "report"
+    }
+    rating_post_result = invoke_http(
+        f"{RATING_SERVICE_POST_URL}",
+        method="POST",
+        json=rating_post_payload
+    )
+    if rating_post_result["Success"] != True:
+        return jsonify({
+            "code": 404,
+            "message": f"Rating failed: {rating_post_result['ErrorMessage']}"
+        }), 404
+    # Step 6: Get all ratings for the seller
+    rating_get_result = invoke_http(
+        f"{RATING_SERVICE_GET_URL}{reporteduserid}",
+        method="GET"
+    )
+    if rating_get_result["Result"]["Success"] != True:
+        return jsonify({
+            "code": 404,
+            "message": f"Rating failed: {rating_get_result['ErrorMessage']}"
+        }), 404
+    # Calculate average rating
+    ratings = rating_get_result["Rating"]
+    total_score = sum(rating["RatingScore"] for rating in ratings)
+    average_rating = total_score / len(ratings) if ratings else 0
+    # Step 7: Update seller rating
+    update_seller_rating_payload = {"rating": average_rating}
+    update_seller_rating_result = invoke_http(
+        f"{USER_SERVICE_URL}/user/{reporteduserid}/rating",
+        method="PUT",
+        json=update_seller_rating_payload
+    )
     
-    # Step 3: Get buyer information
-    user_result = invoke_http(f"{USER_SERVICE_URL}/user/{currentuserid}", method="GET")
-    if user_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer {currentuserid} not found."}), 404
-    user_data = user_result["data"]["user"]
+    
+    
+    
+    # Step 8: Update deal status to verified
+    if (deal_data['status'] > 0):
+        print("Refund")
+        # implement compensating transaction here (refund) and set status to -1
 
     # Get buyer phone number (assuming you've added the endpoint in user.py)
     user_phone_result = invoke_http(f"{USER_SERVICE_URL}/user/getPhoneFromUser/{currentuserid}", method="GET")
@@ -131,11 +214,12 @@ def report_user():
         "event_type": "user_reported",
         "timestamp": datetime.now().isoformat(),
         "deal_id": dealid,
-        "buyer": {
-            "id": user_data["uid"],
-            "name": user_data["name"],
-            "rating": user_data["rating"],
+        "reporter": {
+            "id": currentuserid,
             "phone": user_phone
+        },
+        "reported": {
+            "id": reporteduserid,
         },
     }
     
@@ -150,14 +234,19 @@ def report_user():
     # Step 8: Send SMS notifications
     sms_results = {}
     if user_phone:
-        buyer_message = f"Your report against user {user_data['name']} has been received. Deal ID: {dealid}"
-        sms_results["buyer_sms"] = send_sms(user_phone, buyer_message)
+        message = f"Your report against user {reporteduserid} has been received. Deal ID: {dealid}"
+        sms_results["buyer_sms"] = send_sms(user_phone, message)
     
     # Return success response with combined data
     return jsonify({
         "code": 200,
         "message": "User reported successfully",
         "data": {
+            "reported_user": reporteduserid,
+            "reporter_user": currentuserid,
+            "deal_id": dealid,
+            "report_status": chatgpt_data,
+            "report_reason": reason,
             "notifications": {
                 "amqp_sent": True,
                 "sms_results": sms_results

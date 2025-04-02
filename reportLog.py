@@ -52,11 +52,11 @@ def create_report_log():
             UserID=data["UserID"],
             ReportedUserID=data["ReportedUserID"],
             Reason=data["Reason"],
-            Status=data.get("Status", "Pending")
+            Status=data["Status"]
         )
         db.session.add(new_report)
         db.session.commit()
-        return jsonify({"code": 201, "message": "Report created successfully", "data": new_report.json()}), 201
+        return jsonify({"code": 200, "message": "Report created successfully", "data": new_report.json()}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"code": 500, "message": "An error occurred while creating the report", "error": str(e)}), 500

@@ -148,9 +148,10 @@ def verify_deal(dealid):
         "RatedID": deal_data["sellerid"],
         "DealID": dealid,
         "RatingScore": rating,
+        "RatingType": "verify"
     }
     rating_post_result = invoke_http(
-        f"{RATING_SERVICE_POST_URL}{dealid}",
+        f"{RATING_SERVICE_POST_URL}",
         method="POST",
         json=rating_post_payload
     )
