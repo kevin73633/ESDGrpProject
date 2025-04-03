@@ -36,10 +36,10 @@ RABBITMQ_HOST = os.environ.get('RABBITMQ_HOST', 'localhost')
 RABBITMQ_EXCHANGE = os.environ.get('RABBITMQ_EXCHANGE', 'deal_events')
 
 def send_sms(phone_number, message):
-    return {
-        "success" : True,
-        "message_id" : 000
-    }
+    # return {
+    #     "success" : True,
+    #     "message_id" : 000
+    # }
     """
     Send SMS to any phone number using Amazon SNS
     
@@ -225,7 +225,7 @@ def verify_deal(dealid):
     
     # Step 10: Send notifications via AMQP
     amqp_lib.publish_message(
-        routing_key="deal.verified",
+        routing_key="deal.verified.notification",
         message=notification_payload,
         exchange_name=RABBITMQ_EXCHANGE,
         hostname=RABBITMQ_HOST

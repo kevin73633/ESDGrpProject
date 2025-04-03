@@ -1,11 +1,13 @@
+version: '3'
+
 volumes:
   rabbitmq_data:
-    name: deal_rabbitmq_data
+    name: esd_rabbitmq_data
 
 networks:
-  deal-net:
+  esd-net:
     driver: bridge
-    name: deal-net
+    name: esd-net
 
 services:
   confirm_deal:
@@ -31,9 +33,8 @@ services:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_EXCHANGE: deal_events
     networks:
-      - deal-net
+      - esd-net
 
-  
   verify_deal:
     build:
       context: ./
@@ -57,7 +58,7 @@ services:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_EXCHANGE: deal_events
     networks:
-      - deal-net
+      - esd-net
 
   report_user:
     build:
@@ -82,7 +83,7 @@ services:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_EXCHANGE: deal_events
     networks:
-      - deal-net
+      - esd-net
   
   account:
     build:
@@ -97,7 +98,7 @@ services:
       dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
       PYTHONUNBUFFERED: 1
     networks:
-      - deal-net
+      - esd-net
 
   paymentrecord:
     build:
@@ -112,7 +113,7 @@ services:
       dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
       PYTHONUNBUFFERED: 1
     networks:
-      - deal-net
+      - esd-net
 
   payment:
     build:
@@ -129,7 +130,7 @@ services:
     environment:
       PYTHONUNBUFFERED: 1
     networks:
-      - deal-net
+      - esd-net
 
   user:
     build:
@@ -144,7 +145,7 @@ services:
       dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
       PYTHONUNBUFFERED: 1
     networks:
-      - deal-net
+      - esd-net
 
   product:
     build:
@@ -159,7 +160,7 @@ services:
       dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
       PYTHONUNBUFFERED: 1
     networks:
-      - deal-net
+      - esd-net
 
   deal:
     build:
@@ -174,7 +175,7 @@ services:
       dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
       PYTHONUNBUFFERED: 1
     networks:
-      - deal-net
+      - esd-net
 
   chat:
     build:
@@ -189,7 +190,7 @@ services:
       dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
       PYTHONUNBUFFERED: 1
     networks:
-      - deal-net
+      - esd-net
 
   chatgpt:
     build:
@@ -204,7 +205,7 @@ services:
       PYTHONUNBUFFERED: 1
       OPENAI_API_KEY: ${OPENAI_API_KEY}
     networks:
-      - deal-net
+      - esd-net
 
   reportlog:
     build:
@@ -219,7 +220,7 @@ services:
       dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
       PYTHONUNBUFFERED: 1
     networks:
-      - deal-net
+      - esd-net
 
   rating:
     build:
@@ -234,7 +235,7 @@ services:
       dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
       PYTHONUNBUFFERED: 1
     networks:
-      - deal-net
+      - esd-net
 
   notification:
     build:
@@ -256,11 +257,11 @@ services:
       RABBITMQ_EXCHANGE: deal_events
       RABBITMQ_QUEUE: notification_queue
     networks:
-      - deal-net
+      - esd-net
 
   rabbitmq:
     image: rabbitmq:3-management
-    hostname: deal-rabbit
+    hostname: esd-rabbit
     container_name: rabbitmq
     restart: always
     ports:
@@ -269,4 +270,26 @@ services:
     volumes: 
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
-      - deal-net
+      - esd-net
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  amqp_setup:
+    build:
+      context: ./
+      dockerfile: amqp_setup.Dockerfile
+    container_name: amqp_setup
+    restart: "no"  
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      PYTHONUNBUFFERED: 1
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_EXCHANGE: deal_events
+    networks:
+      - esd-net
