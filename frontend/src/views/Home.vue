@@ -51,16 +51,17 @@
     <section v-else class="featured-deals mt-4">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0">{{ selectedCategory ? `${getCategoryName(selectedCategory)} Deals` : 'Featured Deals' }}</h5>
-        <div class="dropdown">
-          <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-            Sort By
+        <div class="dropdown custom-dropdown">
+          <button class="btn btn-outline-secondary" type="button" @click="toggleSortDropdown">
+            Sort By: {{ getSortOptionLabel() }}
+            <i class="fas fa-chevron-down ms-1"></i>
           </button>
-          <ul class="dropdown-menu" aria-labelledby="sortDropdown">
-            <li><a class="dropdown-item" href="#" @click.prevent="sortDeals('newest')">Newest</a></li>
-            <li><a class="dropdown-item" href="#" @click.prevent="sortDeals('price-low')">Price: Low to High</a></li>
-            <li><a class="dropdown-item" href="#" @click.prevent="sortDeals('price-high')">Price: High to Low</a></li>
-            <li><a class="dropdown-item" href="#" @click.prevent="sortDeals('title')">Alphabetical</a></li>
-          </ul>
+          <div class="dropdown-menu" :class="{ 'show': sortDropdownOpen }">
+            <a class="dropdown-item" href="#" @click.prevent="sortDeals('newest'); toggleSortDropdown()">Newest</a>
+            <a class="dropdown-item" href="#" @click.prevent="sortDeals('price-low'); toggleSortDropdown()">Price: Low to High</a>
+            <a class="dropdown-item" href="#" @click.prevent="sortDeals('price-high'); toggleSortDropdown()">Price: High to Low</a>
+            <a class="dropdown-item" href="#" @click.prevent="sortDeals('title'); toggleSortDropdown()">Alphabetical</a>
+          </div>
         </div>
       </div>
       
@@ -337,7 +338,8 @@ export default {
       isSubmitting: false,
       modalInstance: null,
       successToast: null,
-      errorToast: null
+      errorToast: null,
+      sortDropdownOpen: false,
     };
   },
   computed: {
@@ -384,7 +386,7 @@ export default {
       return localStorage.getItem('uid') || '';
     }
   },
-  async mounted() {
+  mounted() {
     // Initialize Bootstrap components
     if (this.$refs.dealModal) {
       this.modalInstance = new Modal(this.$refs.dealModal);
@@ -404,10 +406,37 @@ export default {
       });
     }
     
+    document.addEventListener('click', (e) => {
+    const dropdownElement = document.querySelector('.custom-dropdown');
+    if (dropdownElement && !dropdownElement.contains(e.target)) {
+      this.sortDropdownOpen = false;
+    }
+  });
+  
     // Fetch products when component mounts
-    await this.fetchProducts();
+    this.fetchProducts();
   },
   methods: {
+
+    toggleSortDropdown() {
+      this.sortDropdownOpen = !this.sortDropdownOpen;
+    },
+
+    getSortOptionLabel() {
+      switch (this.sortOption) {
+        case 'newest':
+          return 'Newest';
+        case 'price-low':
+          return 'Price: Low to High';
+        case 'price-high':
+          return 'Price: High to Low';
+        case 'title':
+          return 'Alphabetical';
+        default:
+          return 'Newest';
+      }
+    },
+
     // Fetch products from API
     async fetchProducts() {
       this.loading = true;
@@ -835,6 +864,53 @@ export default {
   .category-item {
     padding: 6px 12px;
     font-size: 0.9rem;
+  }
+
+  
+  .custom-dropdown {
+    position: relative;
+  }
+
+  .custom-dropdown .dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    z-index: 1000;
+    display: none;
+    min-width: 10rem;
+    padding: 0.5rem 0;
+    margin: 0.125rem 0 0;
+    font-size: 1rem;
+    color: #212529;
+    text-align: left;
+    list-style: none;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid rgba(0,0,0,.15);
+    border-radius: 0.25rem;
+  }
+
+  .custom-dropdown .dropdown-menu.show {
+    display: block;
+  }
+
+  .custom-dropdown .dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 0.25rem 1.5rem;
+    clear: both;
+    font-weight: 400;
+    color: #212529;
+    text-align: inherit;
+    white-space: nowrap;
+    background-color: transparent;
+    border: 0;
+  }
+
+  .custom-dropdown .dropdown-item:hover, .custom-dropdown .dropdown-item:focus {
+    color: #16181b;
+    text-decoration: none;
+    background-color: #f8f9fa;
   }
 }
 </style>
