@@ -171,6 +171,7 @@ export default {
         if (response.data.code === 200) {
           // Successful login
           this.successMessage = 'Login successful! Redirecting...';
+          localStorage.setItem('uid', this.uid);
           
           // If remember me is checked, store the user ID (Optional)
           if (this.rememberMe) {

@@ -243,7 +243,7 @@ export default {
       return this.$route.params.id;
     },
     currentUserId() {
-      return localStorage.getItem('uid') || '';
+      return localStorage.getItem('uid') || z;
     },
     isOwner() {
       return this.product && this.currentUserId && this.product.userid === this.currentUserId;
