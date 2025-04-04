@@ -39,7 +39,7 @@
 </template>
 
 <script>
-const REPORT_USER_API_URL = 'http://localhost:5300/report_user'; 
+const REPORT_USER_API_URL = 'http://localhost:8000/report_user'; 
 import axios from 'axios';
 export default {
   name: 'ReportButton',
