@@ -139,6 +139,7 @@ def report_user():
             "message": f"Rating failed: {reportLog_post_result['error']}"
         }), 404
     
+    payment_result_string = None
     # refund deal if reported
     if (deal_data['status'] == 1 or deal_data['status'] == 3):
         print("Refund")
@@ -168,6 +169,7 @@ def report_user():
                 "code": payment_result["code"],
                 "message": f"Payment failed: {payment_result['message']}"
             }), payment_result["code"]
+        payment_result_string = payment_result["transaction"]
         # implement compensating transaction here (refund) and set status to -1
 
     update_deal_payload = {"status": -1}
@@ -180,6 +182,7 @@ def report_user():
         return jsonify({
             "code": 200,
             "message": "User report not harmful",
+            "payment" : payment_result_string,
             "data": {
                 "is_harmful": chatgpt_data
             }
