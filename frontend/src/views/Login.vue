@@ -22,7 +22,7 @@
               </div>
               
               <!-- Login Form -->
-              <form @submit.prevent="handleLogin" class="needs-validation">
+              <form @submit.prevent="handleUserIdSubmit" class="needs-validation" v-if="!otpSent">
                 <div class="mb-3">
                   <label for="uid" class="form-label">User ID</label>
                   <div class="input-group">
@@ -53,16 +53,75 @@
                   <button 
                     type="submit" 
                     class="btn btn-primary btn-lg"
-                    :disabled="isLoggingIn"
+                    :disabled="isProcessing"
                   >
-                    <span v-if="isLoggingIn" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    {{ isLoggingIn ? 'Signing In...' : 'Sign In' }}
+                    <span v-if="isProcessing" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    {{ isProcessing ? 'Sending OTP...' : 'Continue' }}
+                  </button>
+                </div>
+              </form>
+              
+              <!-- OTP Verification Form -->
+              <form @submit.prevent="verifyOtp" class="needs-validation" v-if="otpSent">
+                <div class="text-center mb-3">
+                  <p>A verification code has been sent to <strong>{{ maskedPhone }}</strong></p>
+                </div>
+                
+                <div class="mb-4">
+                  <label for="otp" class="form-label">Enter Verification Code</label>
+                  <div class="input-group">
+                    <span class="input-group-text">
+                      <i class="bi bi-shield-lock"></i>
+                    </span>
+                    <input 
+                      type="text" 
+                      class="form-control" 
+                      id="otp" 
+                      v-model="otp"
+                      :class="{ 'is-invalid': validationErrors.otp }"
+                      placeholder="Enter 6-digit code"
+                      maxlength="6"
+                      required
+                    >
+                    <div v-if="validationErrors.otp" class="invalid-feedback">
+                      {{ validationErrors.otp }}
+                    </div>
+                  </div>
+                  <div class="d-flex justify-content-between mt-2">
+                    <small class="text-muted">Didn't receive code?</small>
+                    <button 
+                      type="button" 
+                      class="btn btn-link btn-sm p-0" 
+                      @click="resendOtp"
+                      :disabled="resendCooldown > 0"
+                    >
+                      {{ resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code' }}
+                    </button>
+                  </div>
+                </div>
+                
+                <div class="d-grid gap-2">
+                  <button 
+                    type="submit" 
+                    class="btn btn-primary btn-lg"
+                    :disabled="isVerifying"
+                  >
+                    <span v-if="isVerifying" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    {{ isVerifying ? 'Verifying...' : 'Verify & Sign In' }}
+                  </button>
+                  
+                  <button 
+                    type="button" 
+                    class="btn btn-outline-secondary"
+                    @click="cancelOtpVerification"
+                  >
+                    Back
                   </button>
                 </div>
               </form>
               
               <!-- Demo Accounts -->
-              <div class="mt-4">
+              <div class="mt-4" v-if="!otpSent">
                 <div class="separator text-center mb-3">
                   <span class="separator-text">Demo Accounts</span>
                 </div>
@@ -101,17 +160,27 @@ axios.defaults.withCredentials = true;  // Enable sending cookies
 
 // API base URL - update this to match your Flask backend
 const API_URL = 'http://localhost:5001';
+// OTP API from OutSystems
+const OTP_API_URL = 'http://localhost:5001/generate-otp';
 
 export default {
   name: 'LoginPage',
   data() {
     return {
       uid: '',
+      otp: '',
+      generatedOtp: '', // Store the generated OTP
+      userPhone: '', // Store the retrieved phone number
+      maskedPhone: '', // For display purposes
       rememberMe: false,
-      isLoggingIn: false,
+      isProcessing: false,
+      isVerifying: false,
+      otpSent: false,
       errorMessage: '',
       successMessage: '',
       validationErrors: {},
+      resendCooldown: 0,
+      cooldownInterval: null,
       demoAccounts: [
         { uid: '12345678', name: 'user1' },
         { uid: '22345678', name: 'user2' },
@@ -136,7 +205,7 @@ export default {
         console.log('Not logged in');
       }
     },
-    validateForm() {
+    validateUserId() {
       this.validationErrors = {};
       let isValid = true;
       
@@ -148,32 +217,129 @@ export default {
       
       return isValid;
     },
-    async handleLogin() {
+    validateOtp() {
+      this.validationErrors = {};
+      let isValid = true;
+      
+      // Validate OTP
+      if (!this.otp.trim()) {
+        this.validationErrors.otp = 'Verification code is required';
+        isValid = false;
+      } else if (this.otp.length !== 6 || !/^\d+$/.test(this.otp)) {
+        this.validationErrors.otp = 'Please enter a valid 6-digit code';
+        isValid = false;
+      }
+      
+      return isValid;
+    },
+    async handleUserIdSubmit() {
       // Clear previous messages
       this.errorMessage = '';
       this.successMessage = '';
       
       // Validate form
-      if (!this.validateForm()) {
+      if (!this.validateUserId()) {
         return;
       }
       
       // Set loading state
-      this.isLoggingIn = true;
+      this.isProcessing = true;
       
       try {
-        // Call login API with credentials
-        const response = await axios.post(`${API_URL}/login`, {
+        // Call API to verify user ID and get phone number
+        const response = await axios.post(`${API_URL}/verify-user`, {
           uid: this.uid
-        }, {
-          withCredentials: true // Important for cookies to work
         });
+        
         if (response.data.code === 200) {
-          // Successful login
-          this.successMessage = 'Login successful! Redirecting...';
-          localStorage.setItem('uid', this.uid);
+          // Store the user's phone number
+          this.userPhone = response.data.data.phone;
           
-          // If remember me is checked, store the user ID (Optional)
+          // Create masked version of phone number for display
+          this.maskedPhone = this.maskPhoneNumber(this.userPhone);
+          
+          // Generate and send OTP
+          await this.generateAndSendOtp();
+          
+          // Move to OTP verification step
+          this.otpSent = true;
+          this.successMessage = 'Verification code sent successfully!';
+        } else {
+          this.errorMessage = response.data.message || 'Failed to verify user ID';
+        }
+      } catch (error) {
+        // Handle errors
+        if (error.response && error.response.data) {
+          this.errorMessage = error.response.data.message || 'User verification failed. Please try again.';
+        } else {
+          this.errorMessage = 'Network error. Please check your connection.';
+        }
+      } finally {
+        // Reset loading state
+        this.isProcessing = false;
+      }
+    },
+    async generateAndSendOtp() {
+      try {
+        console.log("Generating OTP...");
+        // Call your backend proxy instead
+        const otpResponse = await axios.get(OTP_API_URL);
+        console.log("OTP response:", otpResponse);
+        
+        if (otpResponse.data && otpResponse.data.OTP) {
+          // Store the generated OTP
+          this.generatedOtp = otpResponse.data.OTP;
+          
+          console.log("Sending OTP...");
+          // Call backend to send OTP via AWS SNS
+          await axios.post(`${API_URL}/send-otp`, {
+            phone: this.userPhone,
+            otp: this.generatedOtp
+          });
+          
+          // Start the resend cooldown
+          this.startResendCooldown();
+          
+          return true;
+        } else {
+          console.error("Invalid OTP response:", otpResponse);
+          throw new Error("Invalid OTP response from server");
+        }
+      } catch (error) {
+        console.error("Error generating/sending OTP:", error);
+        this.errorMessage = "Failed to send verification code. Please try again.";
+        return false;
+      }
+    },
+    async verifyOtp() {
+      // Clear previous messages
+      this.errorMessage = '';
+      this.successMessage = '';
+      
+      // Validate OTP
+      if (!this.validateOtp()) {
+        return;
+      }
+      
+      // Set loading state
+      this.isVerifying = true;
+      
+      try {
+        console.log(`Verifying OTP: ${this.otp} for user ${this.uid}`);
+        
+        // Call API to verify OTP
+        const response = await axios.post(`${API_URL}/verify-otp`, {
+          uid: this.uid,
+          otp: this.otp
+        });
+        
+        console.log("Verification response:", response);
+        
+        if (response.data.code === 200) {
+          // OTP verified successfully
+          this.successMessage = 'Verification successful! Logging in...';
+          
+          // If remember me is checked, store the user ID
           if (this.rememberMe) {
             localStorage.setItem('rememberedUid', this.uid);
           } else {
@@ -184,19 +350,80 @@ export default {
           setTimeout(() => {
             this.$router.push('/home');
           }, 1000);
+        } else {
+          this.errorMessage = response.data.message || 'Verification failed. Please try again.';
         }
       } catch (error) {
-        // Handle login errors
+        // Handle errors
+        console.error("Error verifying OTP:", error);
         if (error.response && error.response.data) {
-          this.errorMessage = error.response.data.message || 'Login failed. Please try again.';
+          this.errorMessage = error.response.data.message || 'Verification failed. Please try again.';
         } else {
-          console.log(error.response)
           this.errorMessage = 'Network error. Please check your connection.';
         }
       } finally {
         // Reset loading state
-        this.isLoggingIn = false;
+        this.isVerifying = false;
       }
+    },
+    async resendOtp() {
+      // Clear previous messages
+      this.errorMessage = '';
+      this.successMessage = '';
+      
+      // Set loading state
+      this.isProcessing = true;
+      
+      // Generate and send new OTP
+      const success = await this.generateAndSendOtp();
+      
+      if (success) {
+        this.successMessage = 'Verification code resent successfully!';
+      }
+      
+      // Reset loading state
+      this.isProcessing = false;
+    },
+    startResendCooldown() {
+      // Set initial cooldown time (60 seconds)
+      this.resendCooldown = 60;
+      
+      // Clear any existing interval
+      if (this.cooldownInterval) {
+        clearInterval(this.cooldownInterval);
+      }
+      
+      // Start countdown
+      this.cooldownInterval = setInterval(() => {
+        if (this.resendCooldown > 0) {
+          this.resendCooldown--;
+        } else {
+          // Stop the interval when countdown reaches 0
+          clearInterval(this.cooldownInterval);
+        }
+      }, 1000);
+    },
+    cancelOtpVerification() {
+      // Clear OTP related data
+      this.otp = '';
+      this.otpSent = false;
+      this.generatedOtp = '';
+      
+      // Clear any error/success messages
+      this.errorMessage = '';
+      this.successMessage = '';
+      
+      // Clear the cooldown interval
+      if (this.cooldownInterval) {
+        clearInterval(this.cooldownInterval);
+        this.resendCooldown = 0;
+      }
+    },
+    maskPhoneNumber(phone) {
+      if (!phone || phone.length < 8) return '***-***-****';
+      
+      // Keep last 4 digits visible, mask the rest
+      return '***-***-' + phone.slice(-4);
     },
     fillDemoAccount(uid) {
       this.uid = uid;
@@ -208,6 +435,12 @@ export default {
     if (rememberedUid) {
       this.uid = rememberedUid;
       this.rememberMe = true;
+    }
+  },
+  beforeUnmount() {
+    // Clear interval when component is destroyed
+    if (this.cooldownInterval) {
+      clearInterval(this.cooldownInterval);
     }
   }
 };

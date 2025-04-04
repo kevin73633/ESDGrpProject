@@ -144,6 +144,10 @@ services:
     environment:
       dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/Project
       PYTHONUNBUFFERED: 1
+      SECRET_KEY: dealshare-login-secret-key-2025
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
     networks:
       - esd-net
 
