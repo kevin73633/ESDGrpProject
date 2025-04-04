@@ -105,15 +105,14 @@ def report_user():
     # Step 1: Get deal information
     
     dealid = request.json['dealId']
+    reason = request.json['Reason']
+    currentuserid = request.json['UserID']
+    reporteduserid = request.json['ReportedUserID']
 
     deal_result = invoke_http(f"{DEAL_SERVICE_URL}/deal/{dealid}", method="GET")
     if deal_result["code"] != 200:return jsonify({"code": 404,"message": f"Deal {dealid} not found."}), 404
     deal_data = deal_result["data"]["deal"]
 
-
-    reason = request.json['Reason']
-    currentuserid = request.json['UserID']
-    reporteduserid = request.json['ReportedUserID']
 
     chat_result = invoke_http(f"{CHAT_SERVICE_URL}/chat/getmessagebetween/{dealid}", method="GET")
     if chat_result["code"] != 200:return jsonify({"code": 404,"message": f"chat in {dealid} not found."}), 404
@@ -143,20 +142,11 @@ def report_user():
     # refund deal if reported
     if (deal_data['status'] == 2 or deal_data['status'] == 3):
         print("Refund")
-        # Step 1: Get deal information
-        deal_result = invoke_http(f"{DEAL_SERVICE_URL}/deal/{dealid}", method="GET")
-        if deal_result["code"] != 200:return jsonify({"code": 404,"message": f"Deal {dealid} not found."}), 404
-        deal_data = deal_result["data"]["deal"]
         
         # Step 2: Get product details
         product_result = invoke_http(f"{PRODUCT_SERVICE_URL}/products/{deal_data['productid']}", method="GET")
         if product_result["code"] != 200:return jsonify({"code": 404,"message": f"Product {deal_data['productid']} not found."}), 404
         product_data = product_result["data"]["product"]
-
-        # Step 3: Get buyer information
-        user_result = invoke_http(f"{USER_SERVICE_URL}/user/{deal_data["buyerid"]}", method="GET")
-        if user_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer {deal_data["buyerid"]} not found."}), 404
-        user_data = user_result["data"]["user"]
 
         # Get buyer account number
         user_account_result = invoke_http(f"{USER_SERVICE_URL}/user/getAccNumFromUser/{deal_data["buyerid"]}", method="GET")
