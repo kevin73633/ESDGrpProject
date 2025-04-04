@@ -21,6 +21,8 @@ CORS(app,
 # Define microservice URLs
 DEAL_SERVICE_URL = "http://deal:5020"
 USER_SERVICE_URL = "http://user:5001"
+PRODUCT_SERVICE_URL = "http://product:5005"
+PAYMENT_SERVICE_URL = "http://payment:5031"
 CHAT_SERVICE_URL = "http://chat:5087"
 CHATGPT_SERVICE_URL = "http://chatgpt:5002"
 REPORTLOG_SERVICE_URL = "http://reportLog:5004"
@@ -137,6 +139,47 @@ def report_user():
             "code": 404,
             "message": f"Rating failed: {reportLog_post_result['error']}"
         }), 404
+    
+    # refund deal if reported
+    if (deal_data['status'] == 2 or deal_data['status'] == 3):
+        print("Refund")
+        # Step 1: Get deal information
+        deal_result = invoke_http(f"{DEAL_SERVICE_URL}/deal/{dealid}", method="GET")
+        if deal_result["code"] != 200:return jsonify({"code": 404,"message": f"Deal {dealid} not found."}), 404
+        deal_data = deal_result["data"]["deal"]
+        
+        # Step 2: Get product details
+        product_result = invoke_http(f"{PRODUCT_SERVICE_URL}/products/{deal_data['productid']}", method="GET")
+        if product_result["code"] != 200:return jsonify({"code": 404,"message": f"Product {deal_data['productid']} not found."}), 404
+        product_data = product_result["data"]["product"]
+
+        # Step 3: Get buyer information
+        user_result = invoke_http(f"{USER_SERVICE_URL}/user/{deal_data["buyerid"]}", method="GET")
+        if user_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer {deal_data["buyerid"]} not found."}), 404
+        user_data = user_result["data"]["user"]
+
+        # Get buyer account number
+        user_account_result = invoke_http(f"{USER_SERVICE_URL}/user/getAccNumFromUser/{deal_data["buyerid"]}", method="GET")
+        if user_account_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer account information not found."}), 404
+        user_account = user_account_result["data"]["AccNum"]
+        # Step 4: Process payment (escrow)
+        payment_payload = {
+            "accnum": user_account,
+            "amount": product_data["price"]
+        }
+        
+        payment_result = invoke_http(
+            f"{PAYMENT_SERVICE_URL}/payment/refund",
+            method="POST",
+            json=payment_payload
+        )
+        if payment_result["code"] != 200:
+            return jsonify({
+                "code": payment_result["code"],
+                "message": f"Payment failed: {payment_result['message']}"
+            }), payment_result["code"]
+        # implement compensating transaction here (refund) and set status to -1
+
     update_deal_payload = {"status": -1}
     update_deal_result = invoke_http(
         f"{DEAL_SERVICE_URL}/deal/{dealid}/status",
@@ -195,11 +238,7 @@ def report_user():
     
     
     
-    # Step 8: Update deal status to verified
-    if (deal_data['status'] > 0):
-        print("Refund")
-        # implement compensating transaction here (refund) and set status to -1
-
+    
     # Get buyer phone number (assuming you've added the endpoint in user.py)
     user_phone_result = invoke_http(f"{USER_SERVICE_URL}/user/getPhoneFromUser/{currentuserid}", method="GET")
     user_phone = None
