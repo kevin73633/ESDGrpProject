@@ -143,11 +143,6 @@ def report_user():
     # refund deal if reported
     if (deal_data['status'] == 2 or deal_data['status'] == 3):
         print("Refund")
-        # Step 1: Get deal information
-        deal_result = invoke_http(f"{DEAL_SERVICE_URL}/deal/{dealid}", method="GET")
-        if deal_result["code"] != 200:return jsonify({"code": 404,"message": f"Deal {dealid} not found."}), 404
-        deal_data = deal_result["data"]["deal"]
-        
         # Step 2: Get product details
         product_result = invoke_http(f"{PRODUCT_SERVICE_URL}/products/{deal_data['productid']}", method="GET")
         if product_result["code"] != 200:return jsonify({"code": 404,"message": f"Product {deal_data['productid']} not found."}), 404

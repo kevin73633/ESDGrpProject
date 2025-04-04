@@ -95,8 +95,8 @@
                     <button class="btn btn-primary w-100 mb-2" @click="startChat">
                       <i class="bi bi-chat-dots me-2"></i>Chat with Seller
                     </button>
-                    <button class="btn btn-outline-primary w-100" @click="viewSellerProfile">
-                      <i class="bi bi-person me-2"></i>View Profile
+                    <button class="btn btn-outline-primary w-100" @click="goToProfile">
+                      <i class="bi bi-person-circle">Profile</i>
                     </button>
                   </div>
                 </div>
@@ -214,6 +214,7 @@
 <script>
 import axios from 'axios';
 import { Modal, Toast } from 'bootstrap';
+import OtherProfile from './OtherProfile.vue';
 
 // Define API URLs
 const PRODUCT_API_URL = 'http://localhost:5005';
@@ -243,7 +244,7 @@ export default {
       return this.$route.params.id;
     },
     currentUserId() {
-      return localStorage.getItem('uid') || '';
+      return localStorage.getItem('uid') || z;
     },
     isOwner() {
       return this.product && this.currentUserId && this.product.userid === this.currentUserId;
@@ -423,11 +424,22 @@ export default {
       }
     },
     
-    // View seller profile
-    viewSellerProfile() {
-      if (this.seller && this.seller.uid) {
-        this.$router.push({ path: `/profile/${this.seller.uid}` });
+    goToProfile() {
+      if (this.seller.uid) {
+        // If looking at another user's profile
+        this.$router.push({ 
+          name: 'OtherProfile', 
+          params: { id: this.seller.uid } 
+        });
+      } else {
+        // Go to own profile
+        this.$router.push({ name: 'Profile' });
       }
+    },
+
+    // To view your own profile from any page, add this method:
+    goToMyProfile() {
+      this.$router.push({ name: 'Profile' });
     },
     
     // Copy product link to clipboard

@@ -60,7 +60,7 @@
                   </div>
                 </li>
               </ul>
-            </div>  
+            </div>
           </div>
         </div>
         
@@ -92,7 +92,7 @@
                   <i class="bi bi-bell"></i>
                 </button>
                 <button class="btn btn-sm btn-light" @click="goToProfile">
-                  <i class="bi bi-cog">profile</i>
+                  <i class="bi bi-person-circle">Profile</i>
                 </button>
               </div>
             </div>
@@ -362,6 +362,20 @@ export default {
     },
     
     goToProfile() {
+      if (this.selectedChatUserId) {
+        // If looking at another user's profile
+        this.$router.push({ 
+          name: 'OtherProfile', 
+          params: { id: this.selectedChatUserId } 
+        });
+      } else {
+        // Go to own profile
+        this.$router.push({ name: 'Profile' });
+      }
+    },
+
+    // To view your own profile from any page, add this method:
+    goToMyProfile() {
       this.$router.push({ name: 'Profile' });
     },
     
@@ -402,135 +416,158 @@ export default {
     
     // Load users for chat sidebar
     async loadUsers() {
-  try {
-    this.isLoading = true;
-    this.apiError = null;
-    
-    // Get all deals for the current user
-    this.chatUsers = [];
-    
-    console.log("Fetching deals for user:", this.currentUserId);
-    const dealsResponse = await axios.get(`${DEAL_API_URL}/get_deals_with_user/${this.currentUserId}`);
-    
-    // Log the deals response for debugging
-    console.log("Deals response:", dealsResponse.data);
-    
-    if (dealsResponse.data.code === 200 && dealsResponse.data.data && dealsResponse.data.data.deals) {
-      const deals = dealsResponse.data.data.deals;
-      console.log(`Found ${deals.length} deals`);
-      
-      // For each deal, get the other user's information
-      for (let deal of deals) {
-        // Determine the other user ID (seller or buyer)
-        const otherUserId = (this.currentUserId == deal.sellerid) 
-          ? deal.buyerid 
-          : deal.sellerid;
+      try {
+        this.isLoading = true;
+        this.apiError = null;
         
-        console.log(`Processing deal ${deal.dealid} with other user ${otherUserId}`);
+        // Get all deals for the current user
+        this.chatUsers = [];
         
+        console.log("Fetching deals for user:", this.currentUserId);
         try {
-          console.log(`Fetching user data for ID: ${otherUserId}`);
-          const userResponse = await axios.get(`${AUTH_API_URL}/user/${otherUserId}`, { 
-            withCredentials: true 
-          });
+          const dealsResponse = await axios.get(`${DEAL_API_URL}/get_deals_with_user/${this.currentUserId}`);
           
-          // Log the complete user response for debugging
-          console.log(`User API response for ${otherUserId}:`, userResponse.data);
+          // Log the deals response for debugging
+          console.log("Deals response:", dealsResponse.data);
           
-          // Create a placeholder user if we can't get real data
-          let userData = {
-            uid: otherUserId,
-            name: `User ${otherUserId.substring(0, 4)}...`,
-            online: false,
-            rating: 0
-          };
+          // Check if response has deals data
+          let deals = [];
           
-          // Try to extract actual user data if available
-          if (userResponse.data.code === 200 && userResponse.data.data) {
-            // Check different possible structures
-            if (userResponse.data.data.user) {
-              if (Array.isArray(userResponse.data.data.user) && userResponse.data.data.user.length > 0) {
-                // If it's an array, use the first item
-                const user = userResponse.data.data.user[0];
-                if (user && user.uid) {
-                  userData = {
-                    uid: user.uid,
-                    name: user.name || `User ${user.uid.substring(0, 4)}...`,
-                    online: false,
-                    rating: user.rating || 0
-                  };
-                }
-              } else if (userResponse.data.data.user.uid) {
-                // If it's a direct object
-                const user = userResponse.data.data.user;
-                userData = {
-                  uid: user.uid,
-                  name: user.name || `User ${user.uid.substring(0, 4)}...`,
-                  online: false,
-                  rating: user.rating || 0
-                };
-              }
+          if (dealsResponse.data.code === 200) {
+            if (dealsResponse.data.data && Array.isArray(dealsResponse.data.data.deals)) {
+              deals = dealsResponse.data.data.deals;
             }
+            
+            console.log(`Found ${deals.length} deals`);
+            
+            // Process deals if there are any
+            if (deals.length > 0) {
+              // For each deal, get the other user's information
+              for (let deal of deals) {
+                // Determine the other user ID (seller or buyer)
+                const otherUserId = (this.currentUserId == deal.sellerid) 
+                  ? deal.buyerid 
+                  : deal.sellerid;
+                
+                console.log(`Processing deal ${deal.dealid} with other user ${otherUserId}`);
+                
+                try {
+                  console.log(`Fetching user data for ID: ${otherUserId}`);
+                  const userResponse = await axios.get(`${AUTH_API_URL}/user/${otherUserId}`, { 
+                    withCredentials: true 
+                  });
+                  
+                  // Log the complete user response for debugging
+                  console.log(`User API response for ${otherUserId}:`, userResponse.data);
+                  
+                  // Create a placeholder user if we can't get real data
+                  let userData = {
+                    uid: otherUserId,
+                    name: `User ${otherUserId.substring(0, 4)}...`,
+                    online: false,
+                    rating: 0
+                  };
+                  
+                  // Try to extract actual user data if available
+                  if (userResponse.data.code === 200 && userResponse.data.data) {
+                    // Check different possible structures
+                    if (userResponse.data.data.user) {
+                      if (Array.isArray(userResponse.data.data.user) && userResponse.data.data.user.length > 0) {
+                        // If it's an array, use the first item
+                        const user = userResponse.data.data.user[0];
+                        if (user && user.uid) {
+                          userData = {
+                            uid: user.uid,
+                            name: user.name || `User ${user.uid.substring(0, 4)}...`,
+                            online: false,
+                            rating: user.rating || 0
+                          };
+                        }
+                      } else if (userResponse.data.data.user.uid) {
+                        // If it's a direct object
+                        const user = userResponse.data.data.user;
+                        userData = {
+                          uid: user.uid,
+                          name: user.name || `User ${user.uid.substring(0, 4)}...`,
+                          online: false,
+                          rating: user.rating || 0
+                        };
+                      }
+                    }
+                  }
+                  
+                  // Add to chat users with fallback data if needed
+                  this.chatUsers.push({
+                    uid: userData.uid,
+                    name: userData.name,
+                    online: userData.online,
+                    active: false,
+                    lastMessage: '',
+                    lastMessageTime: '',
+                    rating: userData.rating,
+                    dealid: deal.dealid
+                  });
+                  
+                  console.log(`Added user to chat list: ${userData.name} (${userData.uid})`);
+                  
+                } catch (userError) {
+                  console.error(`Error fetching user ${otherUserId}:`, userError);
+                  
+                  // Still add user with minimal data since we know they exist
+                  this.chatUsers.push({
+                    uid: otherUserId,
+                    name: `User ${otherUserId.substring(0, 4)}...`, // Show partial ID as name
+                    online: false,
+                    active: false,
+                    lastMessage: '',
+                    lastMessageTime: '',
+                    rating: 0,
+                    dealid: deal.dealid
+                  });
+                  
+                  console.log(`Added placeholder user for ID ${otherUserId}`);
+                }
+              }
+              
+              console.log(`Final chat users count: ${this.chatUsers.length}`);
+              
+              // If we have users, select the first one
+              if (this.chatUsers.length > 0) {
+                console.log("Selecting first chat user:", this.chatUsers[0]);
+                this.selectChat(this.chatUsers[0].uid, this.chatUsers[0].dealid);
+              }
+            } else {
+              // No deals found, but this is OK - just an empty list
+              console.log("No deals found for current user - this is normal");
+              this.selectedChatUser = null;
+              this.selectedChatUserId = null;
+              this.selectedDealId = null;
+              this.messages = [];
+              this.currentDeal = null;
+            }
+          } else {
+            // Non-200 response is an actual error
+            console.error("Invalid deals response code:", dealsResponse.data.code);
+            this.apiError = "Failed to load deals. Please try again later.";
           }
-          
-          // Add to chat users with fallback data if needed
-          this.chatUsers.push({
-            uid: userData.uid,
-            name: userData.name,
-            online: userData.online,
-            active: false,
-            lastMessage: '',
-            lastMessageTime: '',
-            rating: userData.rating,
-            dealid: deal.dealid
-          });
-          
-          console.log(`Added user to chat list: ${userData.name} (${userData.uid})`);
-          
-        } catch (userError) {
-          console.error(`Error fetching user ${otherUserId}:`, userError);
-          
-          // Still add user with minimal data since we know they exist
-          this.chatUsers.push({
-            uid: otherUserId,
-            name: `User ${otherUserId.substring(0, 4)}...`, // Show partial ID as name
-            online: false,
-            active: false,
-            lastMessage: '',
-            lastMessageTime: '',
-            rating: 0,
-            dealid: deal.dealid
-          });
-          
-          console.log(`Added placeholder user for ID ${otherUserId}`);
+        } catch (dealError) {
+          // Check if this is a 404 "No deals found" response
+          if (dealError.response && dealError.response.status === 404) {
+            console.log("No deals found (404 response) - this is normal");
+            // This is a valid state, not an error
+          } else {
+            // This is an actual error
+            console.error("Error fetching deals:", dealError);
+            this.apiError = "Failed to load deals. Please try again later.";
+          }
         }
+      } catch (error) {
+        console.error("Error in loadUsers method:", error);
+        this.apiError = "Failed to load conversations. Please try again later.";
+      } finally {
+        this.isLoading = false;
       }
-      
-      console.log(`Final chat users count: ${this.chatUsers.length}`);
-    } else {
-      console.error("Invalid deals response format:", dealsResponse.data);
-      this.apiError = "Failed to load deals. Invalid response format.";
-    }
-    
-    // If we have users, select the first one
-    if (this.chatUsers.length > 0) {
-      console.log("Selecting first chat user:", this.chatUsers[0]);
-      this.selectChat(this.chatUsers[0].uid, this.chatUsers[0].dealid);
-    } else {
-      console.log("No chat users found");
-      this.selectedChatUser = null;
-      this.selectedChatUserId = null;
-      this.selectedDealId = null;
-      this.messages = [];
-      this.currentDeal = null;
-    }
-  } catch (error) {
-    console.error("Error loading users:", error);
-    this.apiError = "Failed to load users. Please try again later.";
-  } finally {
-    this.isLoading = false;
-  }
-},
+    },
     
     // Select a chat
     selectChat(userId, dealId) {
