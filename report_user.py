@@ -140,7 +140,7 @@ def report_user():
         }), 404
     
     # refund deal if reported
-    if (deal_data['status'] == 2 or deal_data['status'] == 3):
+    if (deal_data['status'] == 1 or deal_data['status'] == 3):
         print("Refund")
         
         # Step 2: Get product details
