@@ -202,6 +202,7 @@
 <script>
 import axios from 'axios';
 import { Modal, Toast } from 'bootstrap';
+import OtherProfile from './OtherProfile.vue';
 
 // Define API URLs
 const PRODUCT_API_URL = 'http://localhost:5005';
@@ -236,7 +237,7 @@ export default {
       return this.$route.params.id;
     },
     currentUserId() {
-      return localStorage.getItem('uid') || '';
+      return localStorage.getItem('uid') || z;
     },
     isOwner() {
       return this.product && this.currentUserId && this.product.userid === this.currentUserId;
@@ -342,107 +343,72 @@ export default {
       if (diffDay > 0) {
         return diffDay === 1 ? '1 day ago' : `${diffDay} days ago`;
       }
+      if (diffHour > 0) {
+        return diffHour === 1 ? '1 hour ago' : `${diffHour} hours ago`;
+      }
+      if (diffMin > 0) {
+        return diffMin === 1 ? '1 minute ago' : `${diffMin} minutes ago`;
+      }
+      return 'Just now';
     },
-    
-    // Navigate to another product
-    navigateToProduct(productId) {
-      if (productId === parseInt(this.productId)) return;
+    formatDate(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    },
+    formatExpiration(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffInDays = Math.floor((date - now) / (1000 * 60 * 60 * 24));
       
-      this.$router.push({ path: `/product/${productId}` });
+      if (diffInDays < 0) {
+        return 'Expired';
+      }
+      if (diffInDays === 0) {
+        return 'Today';
+      }
+      if (diffInDays === 1) {
+        return 'Tomorrow';
+      }
+      if (diffInDays < 7) {
+        return `in ${diffInDays} days`;
+      }
+      return this.formatDate(dateString);
+    },
+    getCategoryName(categoryId) {
+      const category = this.categories.find(c => c.id === categoryId);
+      return category ? category.name : categoryId;
+    },
+    truncateText(text, maxLength) {
+      if (!text) return '';
+      if (text.length <= maxLength) return text;
+      return text.substr(0, maxLength) + '...';
+    },
+    fetchDealDetails() {
+      this.loading = true;
+      this.error = null;
       
-      // Reload page data for new product
-      this.fetchProductDetails();
-    },
-    
-    // Start chat with seller
-    startChat() {
-      if (!this.currentUserId) {
-        // If user is not logged in, show error
-        this.errorMessage = 'Please log in to chat with the seller';
-        if (this.errorToast) {
-          this.errorToast.show();
-        }
-        return;
-      }
-      
-      if (this.seller && this.seller.uid && this.product) {
-        // Navigate to the chat page with necessary parameters
-        // The chat component will handle the creation of the deal and messages when the user sends a message
-        this.$router.push({
-          path: '/chat',
-          query: {
-            productId: this.product.productid,
-            sellerId: this.seller.uid,
-            buyerId: this.currentUserId,
-            productTitle: this.product.title
-          }
-        });
-      } else {
-        this.errorMessage = 'Unable to start chat. Seller information is not available.';
-        if (this.errorToast) {
-          this.errorToast.show();
-        }
-      }
-    },
-    
-    // View seller profile
-    viewSellerProfile() {
-      if (this.seller && this.seller.uid) {
-        this.$router.push({ path: `/profile/${this.seller.uid}` });
-      }
-    },
-    
-    // Copy product link to clipboard
-    copyLink() {
-      const url = window.location.href;
-      navigator.clipboard.writeText(url).then(() => {
-        this.successMessage = 'Link copied to clipboard!';
-        if (this.successToast) {
-          this.successToast.show();
-        }
-      }).catch(err => {
-        console.error('Failed to copy link:', err);
-        this.errorMessage = 'Failed to copy link';
-        if (this.errorToast) {
-          this.errorToast.show();
-        }
-      });
-    },
-    
-    // Edit product action
-    editProduct() {
-      // In a real app, navigate to edit page or open edit modal
-      this.$router.push({ path: `/product/${this.productId}/edit` });
-    },
-    
-    // Show delete confirmation modal
-    confirmDelete() {
-      if (this.deleteModal) {
-        this.deleteModal.show();
-      }
-    },
-    
-    // Delete product action
-    async deleteProduct() {
       try {
-        const response = await axios.delete(`${PRODUCT_API_URL}/products/${this.productId}`);
+        // Get deals from localStorage (shared with Home component)
+        const dealsJSON = localStorage.getItem('deals');
+        const deals = dealsJSON ? JSON.parse(dealsJSON) : [];
         
-        if (response.data.code === 200) {
-          // Hide modal
-          if (this.deleteModal) {
-            this.deleteModal.hide();
-          }
+        // Find the requested deal
+        const dealId = parseInt(this.id);
+        const deal = deals.find(d => d.id === dealId);
+        
+        if (deal) {
+          this.deal = deal;
           
-          // Show success message
-          this.successMessage = 'Product deleted successfully';
-          if (this.successToast) {
-            this.successToast.show();
-          }
+          // Increment view count
+          this.deal.views = (this.deal.views || 0) + 1;
+          this.updateDealInStorage();
           
-          // Navigate back to home page after short delay
-          setTimeout(() => {
-            this.$router.push({ path: '/' });
-          }, 1500);
+          // Find similar deals (same category, excluding this one)
+          this.similarDeals = deals
+            .filter(d => d.category === deal.category && d.id !== dealId)
+            .slice(0, 3);
         } else {
           this.error = "Deal not found";
         }
