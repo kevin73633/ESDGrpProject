@@ -92,7 +92,7 @@
                   <i class="bi bi-bell"></i>
                 </button>
                 <button class="btn btn-sm btn-light" @click="goToProfile">
-                  <i class="bi bi-cog">profile</i>
+                  <i class="bi bi-person-circle">profile</i>
                 </button>
               </div>
             </div>
@@ -362,6 +362,20 @@ export default {
     },
     
     goToProfile() {
+      if (this.selectedChatUserId) {
+        // If looking at another user's profile
+        this.$router.push({ 
+          name: 'OtherProfile', 
+          params: { id: this.selectedChatUserId } 
+        });
+      } else {
+        // Go to own profile
+        this.$router.push({ name: 'Profile' });
+      }
+    },
+
+    // To view your own profile from any page, add this method:
+    goToMyProfile() {
       this.$router.push({ name: 'Profile' });
     },
     
