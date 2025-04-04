@@ -1,76 +1,73 @@
 <template>
-  <div class="product-details-page">
-    <!-- Back button and navigation -->
-    <nav class="navbar navbar-light bg-light">
-      <div class="container-fluid">
-        <router-link to="/" class="navbar-brand d-flex align-items-center">
-          <button class="btn btn-link text-dark me-3 p-0" style="font-size: 1.5rem;">
+  <div class="deal-details">
+    <!-- Navigation Header -->
+    <div class="navigation-bar bg-light">
+      <div class="container">
+        <div class="d-flex align-items-center py-3">
+          <button class="btn btn-link text-dark me-3 p-0" @click="goBack" style="font-size: 1.5rem;">
             <i class="bi bi-arrow-left"></i>
           </button>
-          <span>Back to Deals</span>
-        </router-link>
-        <div class="d-flex align-items-center" v-if="product && isOwner">
-          <div class="dropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="actionDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-              Actions
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="actionDropdown">
-              <li><a class="dropdown-item" href="#" @click.prevent="editProduct">            <i class="bi bi-pencil me-2"></i>Edit</a></li>
-              <li><a class="dropdown-item text-danger" href="#" @click.prevent="confirmDelete"><i class="bi bi-trash me-2"></i>Delete</a></li>
-            </ul>
-          </div>
+          <h5 class="mb-0">Deal Details</h5>
         </div>
       </div>
-    </nav>
+    </div>
 
-    <!-- Loading Indicator -->
-    <div v-if="loading" class="text-center my-5">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
+    <div class="container mt-3 mb-5 pb-5">
+      <div v-if="loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3">Loading deal details...</p>
       </div>
-      <p class="mt-2">Loading product details...</p>
-    </div>
-
-    <!-- Error Message -->
-          <div v-else-if="error" class="alert alert-danger m-4" role="alert">
-      <i class="bi bi-exclamation-circle me-2"></i>
-      {{ error }}
-    </div>
-
-    <!-- Product Details -->
-    <div v-else-if="product" class="container py-4">
-          <div class="product-details">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-              <h2 class="product-title mb-0">{{ product.title }}</h2>
-              <span class="badge bg-primary rounded-pill price-badge">${{ formatPrice(product.price) }}</span>
+      
+      <div v-else-if="error" class="alert alert-danger">
+        <i class="fas fa-exclamation-circle me-2"></i>
+        {{ error }}
+      </div>
+      
+      <div v-else class="deal-content">
+        <!-- Deal Image Gallery -->
+        <div class="image-gallery mb-4">
+          <img :src="deal.image || '/api/placeholder/800/400'" alt="Deal Image" class="main-image rounded">
+          <div v-if="deal.additionalImages && deal.additionalImages.length" class="thumbnails mt-2">
+            <div 
+              v-for="(img, index) in deal.additionalImages" 
+              :key="index" 
+              class="thumbnail"
+              @click="setMainImage(img)"
+            >
+              <img :src="img" :alt="`${deal.title} - Image ${index + 2}`">
             </div>
-
-            <div class="mb-3 d-flex align-items-center">
-              <span class="badge rounded-pill bg-light text-dark me-2">{{ product.category }}</span>
-              <span class="text-muted small">Posted {{ formatDate(product.created_at) }}</span>
+          </div>
+        </div>
+        
+        <!-- Deal Title & Basic Info -->
+        <div class="card mb-4">
+          <div class="card-body">
+            <h3 class="card-title">{{ deal.title }}</h3>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span class="badge rounded-pill bg-primary">{{ getCategoryName(deal.category) }}</span>
+              <span class="posted-time text-muted">Posted {{ formatTimeAgo(deal.createdAt) }}</span>
             </div>
-
-            <hr>
-
-            <div class="location-section mb-3">
-              <h5>Location</h5>
-              <p><i class="bi bi-geo-alt-fill me-2 text-danger"></i>{{ product.location }}</p>
+            
+            <div class="location mb-3">
+              <i class="fas fa-map-marker-alt me-2"></i> {{ deal.location || 'Location not specified' }}
             </div>
-
-            <div class="description-section mb-4">
-              <h5>Description</h5>
-              <p>{{ product.description }}</p>
+            
+            <div class="price mb-3">
+              <i class="fas fa-tag me-2"></i> ${{ deal.price || '0.00' }}
             </div>
-
-            <div v-if="product.expires_at" class="expires-section mb-4">
-              <h5>Deal Expires</h5>
-              <p><i class="bi bi-calendar me-2"></i>{{ formatDate(product.expires_at) }}</p>
+            
+            <div v-if="deal.expiresAt" class="expiration mb-3">
+              <i class="far fa-clock me-2"></i> 
+              <span :class="isExpiringSoon ? 'text-danger' : ''">
+                {{ isExpired ? 'Expired' : `Expires ${formatExpiration(deal.expiresAt)}` }}
+              </span>
             </div>
-
-            <!-- Contact Seller -->
-            <div class="card mb-4">
-              <div class="card-header">
-                <h5 class="mb-0">Contact Information</h5>
+            
+            <div class="deal-stats d-flex">
+              <div class="me-4">
+                <i class="far fa-eye me-1"></i> {{ deal.views || 0 }} views
               </div>
               <div class="card-body">
                 <div v-if="loading" class="text-center">
@@ -126,85 +123,76 @@
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Similar Products Section -->
-      <div class="similar-products mt-5">
-        <h3 class="mb-4">Similar Deals</h3>
-        <div v-if="similarProducts.length === 0" class="alert alert-light">
-          No similar products available at the moment.
-        </div>
-        <div v-else class="row row-cols-1 row-cols-md-3 g-4">
-          <div class="col" v-for="similarProduct in similarProducts" :key="similarProduct.productid">
-            <div class="card h-100 product-card" @click="navigateToProduct(similarProduct.productid)">
-              <img :src="getProductImage(similarProduct)" class="card-img-top similar-product-image" :alt="similarProduct.title">
-              <div class="card-body">
-                <h5 class="card-title">{{ similarProduct.title }}</h5>
-                <p class="card-text text-muted mb-2">{{ similarProduct.location }}</p>
-                <div class="d-flex justify-content-between align-items-center">
-                  <span class="badge bg-light text-dark">{{ similarProduct.category }}</span>
-                  <strong>${{ formatPrice(similarProduct.price) }}</strong>
+        
+        <!-- Related Deals -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">Similar Deals</h5>
+          </div>
+          <div class="card-body">
+            <div v-if="similarDeals.length === 0" class="text-center py-3">
+              <p class="text-muted">No similar deals found</p>
+            </div>
+            <div v-else class="row">
+              <div v-for="(similarDeal, index) in similarDeals" :key="index" class="col-md-4 mb-3">
+                <div class="card h-100">
+                  <img :src="similarDeal.image || '/api/placeholder/300/150'" class="card-img-top" alt="Deal image">
+                  <div class="card-body">
+                    <h6 class="card-title">{{ similarDeal.title }}</h6>
+                    <p class="card-text small">{{ truncateText(similarDeal.description, 60) }}</p>
+                    <router-link :to="{ name: 'dealDetails', params: { id: similarDeal.id } }" class="btn btn-sm btn-outline-primary">
+                      View Deal
+                    </router-link>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div class="modal fade" id="deleteModal" tabindex="-1" ref="deleteModal">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Confirm Delete</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        
+        <!-- Comments Section -->
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Comments ({{ deal.comments?.length || 0 }})</h5>
           </div>
-          <div class="modal-body">
-            <p>Are you sure you want to delete this product? This action cannot be undone.</p>
+          <div class="card-body">
+            <div v-if="!deal.comments || deal.comments.length === 0" class="text-center py-3">
+              <p class="text-muted">No comments yet. Be the first to comment!</p>
+            </div>
+            <div v-else>
+              <div v-for="(comment, index) in deal.comments" :key="index" class="comment-item mb-3">
+                <div class="d-flex">
+                  <div class="me-3">
+                    <img :src="comment.user.avatar || '/api/placeholder/40/40'" alt="User avatar" class="rounded-circle" width="40" height="40">
+                  </div>
+                  <div class="flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <h6 class="mb-0">{{ comment.user.name }}</h6>
+                      <small class="text-muted">{{ formatTimeAgo(comment.createdAt) }}</small>
+                    </div>
+                    <p class="comment-text mb-0">{{ comment.text }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Comment Form -->
+            <div class="comment-form mt-4">
+              <h6>Add a Comment</h6>
+              <form @submit.prevent="addComment">
+                <div class="mb-3">
+                  <textarea 
+                    v-model="newComment" 
+                    class="form-control" 
+                    rows="3" 
+                    placeholder="Write your comment here..."
+                    required
+                  ></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Post Comment</button>
+              </form>
+            </div>
           </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="button" class="btn btn-danger" @click="deleteProduct">
-              <i class="bi bi-trash me-2"></i>Delete
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Success Toast -->
-    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
-      <div 
-        class="toast align-items-center text-white bg-success border-0" 
-        role="alert" 
-        aria-live="assertive" 
-        aria-atomic="true"
-        ref="successToast"
-      >
-        <div class="d-flex">
-          <div class="toast-body">
-            <i class="bi bi-check-circle me-2"></i>
-            {{ successMessage }}
-          </div>
-          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Error Toast -->
-    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
-      <div 
-        class="toast align-items-center text-white bg-danger border-0" 
-        role="alert" 
-        aria-live="assertive" 
-        aria-atomic="true"
-        ref="errorToast"
-      >
-        <div class="d-flex">
-          <div class="toast-body">
-            <i class="bi bi-exclamation-circle me-2"></i>
-            {{ errorMessage }}
-          </div>
-          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
       </div>
     </div>
@@ -214,7 +202,6 @@
 <script>
 import axios from 'axios';
 import { Modal, Toast } from 'bootstrap';
-import OtherProfile from './OtherProfile.vue';
 
 // Define API URLs
 const PRODUCT_API_URL = 'http://localhost:5005';
@@ -223,20 +210,25 @@ const DEAL_API_URL = 'http://localhost:5020';
 const CHAT_API_URL = 'http://localhost:5087';
 
 export default {
-  name: 'ProductDetails',
+  name: 'DealDetails',
+  props: ['id'],
   data() {
     return {
+      deal: null,
       loading: true,
       error: null,
-      product: null,
-      seller: null,
-      similarProducts: [],
-      sellerAvatar: '/api/placeholder/50/50',
-      errorMessage: 'An error occurred. Please try again.',
-      successMessage: 'Operation completed successfully!',
-      deleteModal: null,
-      successToast: null,
-      errorToast: null
+      isLiked: false,
+      newComment: '',
+      mainImage: null,
+      categories: [
+        { id: "electronics", name: "Electronics" },
+        { id: "fashion", name: "Fashion" },
+        { id: "food", name: "Food" },
+        { id: "services", name: "Services" },
+        { id: "books", name: "Books" },
+        { id: "furniture", name: "Furniture" }
+      ],
+      similarDeals: []
     };
   },
   computed: {
@@ -244,7 +236,7 @@ export default {
       return this.$route.params.id;
     },
     currentUserId() {
-      return localStorage.getItem('uid') || z;
+      return localStorage.getItem('uid') || '';
     },
     isOwner() {
       return this.product && this.currentUserId && this.product.userid === this.currentUserId;
@@ -274,112 +266,81 @@ export default {
     await this.fetchProductDetails();
   },
   methods: {
-    // Fetch product details from API
-    async fetchProductDetails() {
-      this.loading = true;
-      this.error = null;
+    goBack() {
+      // Try to use browser back if possible
+      if (window.history.length > 1) {
+        this.$router.go(-1);
+      } else {
+        // Fallback to home route if there's no history
+        this.$router.push({ name: 'home' });
+      }
+    },
+    shareDeal() {
+      // In a real app, implement share functionality
+      // Could use navigator.share() for mobile devices
+      alert(`Sharing deal: ${this.deal.title}`);
+    },
+    toggleLike() {
+      this.isLiked = !this.isLiked;
+      if (this.isLiked) {
+        this.deal.likes = (this.deal.likes || 0) + 1;
+      } else {
+        this.deal.likes = Math.max(0, (this.deal.likes || 0) - 1);
+      }
       
-      try {
-        // Get product details
-        const response = await axios.get(`${PRODUCT_API_URL}/products/${this.productId}`);
-        
-        if (response.data.code === 200) {
-          this.product = response.data.data.product;
-          
-          // Fetch seller information
-          if (this.product.userid) {
-            await this.fetchSellerInfo(this.product.userid);
-          }
-          
-          // Fetch similar products (same category)
-          await this.fetchSimilarProducts(this.product.category);
-        } else {
-          this.error = response.data.message || 'Failed to load product details';
-        }
-      } catch (err) {
-        console.error('Error fetching product details:', err);
-        this.error = 'Unable to load product details. Please try again later.';
-      } finally {
-        this.loading = false;
+      // Update the deal in localStorage
+      this.updateDealInStorage();
+      
+      // In a real app, make an API call to update likes
+      console.log(`Deal ${this.isLiked ? 'liked' : 'unliked'}: ${this.deal.id}`);
+    },
+    addComment() {
+      if (!this.newComment.trim()) return;
+      
+      // Initialize comments array if it doesn't exist
+      if (!this.deal.comments) {
+        this.deal.comments = [];
       }
-    },
-    
-    // Fetch seller information
-    async fetchSellerInfo(userId) {
-      try {
-        const response = await axios.get(`${USER_API_URL}/user/${userId}`, { withCredentials: true });
-        if (response.data.code === 200) {
-          this.seller = response.data.data.user;
+      
+      const comment = {
+        id: Date.now(),
+        text: this.newComment,
+        createdAt: new Date().toISOString(),
+        user: {
+          name: 'You', // In a real app, get the logged-in user
+          avatar: '/api/placeholder/40/40'
         }
-      } catch (err) {
-        console.error('Error fetching seller info:', err);
-        // Don't set error state, just log it, as this is not critical
-      }
+      };
+      
+      this.deal.comments.push(comment);
+      this.newComment = '';
+      
+      // Update the deal in localStorage
+      this.updateDealInStorage();
+      
+      // In a real app, make an API call to save the comment
+      console.log('Comment added:', comment);
     },
-    
-    // Fetch similar products
-    async fetchSimilarProducts(category) {
-      try {
-        const response = await axios.get(`${PRODUCT_API_URL}/products/category/${category}`);
-        if (response.data.code === 200) {
-          // Filter out current product and limit to 3 items
-          this.similarProducts = response.data.data.products
-            .filter(p => p.productid !== parseInt(this.productId))
-            .slice(0, 3);
-        }
-      } catch (err) {
-        console.error('Error fetching similar products:', err);
-        // Don't set error state, just log it
-      }
+    setMainImage(imageUrl) {
+      this.mainImage = imageUrl;
+      this.deal.image = imageUrl;
     },
-    
-    // Get product image or fallback to placeholder
-    getProductImage(product) {
-      return product.image || `/api/placeholder/800/600`;
-    },
-    
-    // Format price to 2 decimal places
-    formatPrice(price) {
-      return parseFloat(price).toFixed(2);
-    },
-    
-    // Format date to readable string
-    formatDate(dateString) {
-      if (!dateString) return 'N/A';
+    formatTimeAgo(dateString) {
+      if (!dateString) return '';
       
       const date = new Date(dateString);
-      
-      // Check if date is valid
-      if (isNaN(date.getTime())) return 'N/A';
-      
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    },
-    
-    // Get expiry status
-    getExpiryStatus(expiryDate) {
-      if (!expiryDate) return '';
-      
-      const expiry = new Date(expiryDate);
       const now = new Date();
+      const diffMs = now - date;
+      const diffSec = Math.floor(diffMs / 1000);
+      const diffMin = Math.floor(diffSec / 60);
+      const diffHour = Math.floor(diffMin / 60);
+      const diffDay = Math.floor(diffHour / 24);
       
-      if (isNaN(expiry.getTime())) return '';
-      
-      if (expiry < now) {
-        return 'Expired';
+      if (diffDay > 30) {
+        return this.formatDate(dateString);
       }
-      
-      // Calculate days until expiry
-      const diffTime = Math.abs(expiry - now);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      if (diffDays <= 1) {
-        return 'Expires today';
-      } else {
-        return `Expires in ${diffDays} days`;
+      if (diffDay > 0) {
+        return diffDay === 1 ? '1 day ago' : `${diffDay} days ago`;
       }
     },
     
@@ -424,22 +385,11 @@ export default {
       }
     },
     
-    goToProfile() {
-      if (this.seller.uid) {
-        // If looking at another user's profile
-        this.$router.push({ 
-          name: 'OtherProfile', 
-          params: { id: this.seller.uid } 
-        });
-      } else {
-        // Go to own profile
-        this.$router.push({ name: 'Profile' });
+    // View seller profile
+    viewSellerProfile() {
+      if (this.seller && this.seller.uid) {
+        this.$router.push({ path: `/profile/${this.seller.uid}` });
       }
-    },
-
-    // To view your own profile from any page, add this method:
-    goToMyProfile() {
-      this.$router.push({ name: 'Profile' });
     },
     
     // Copy product link to clipboard
@@ -494,134 +444,114 @@ export default {
             this.$router.push({ path: '/' });
           }, 1500);
         } else {
-          this.errorMessage = response.data.message || 'Failed to delete product';
-          if (this.errorToast) {
-            this.errorToast.show();
-          }
+          this.error = "Deal not found";
         }
       } catch (err) {
-        console.error('Error deleting product:', err);
-        this.errorMessage = err.response?.data?.message || 'Failed to delete product';
-        if (this.errorToast) {
-          this.errorToast.show();
-        }
+        console.error('Error fetching deal details:', err);
+        this.error = "Error loading deal details";
+      } finally {
+        this.loading = false;
+      }
+    },
+    updateDealInStorage() {
+      // Get all deals from localStorage
+      const dealsJSON = localStorage.getItem('deals');
+      let deals = dealsJSON ? JSON.parse(dealsJSON) : [];
+      
+      // Update the current deal in the array
+      const index = deals.findIndex(d => d.id === parseInt(this.id));
+      if (index !== -1) {
+        deals[index] = this.deal;
+        // Save back to localStorage
+        localStorage.setItem('deals', JSON.stringify(deals));
       }
     }
+  },
+  created() {
+    this.fetchDealDetails();
   }
 };
 </script>
 
 <style scoped>
-.product-details-page {
-  background-color: #f8f9fa;
-  min-height: 100vh;
+.deal-details {
+  padding-bottom: 60px;
 }
 
-.navbar {
-  background-color: #fff;
+.navigation-bar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background-color: white;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  margin-bottom: 20px;
 }
 
-.container {
-  background-color: #fff;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-  padding: 30px;
-  margin: 0 auto;
-}
-
-.product-image-container {
-  position: relative;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.product-image {
+.main-image {
   width: 100%;
-  height: auto;
-  max-height: 500px;
+  max-height: 400px;
+  object-fit: cover;
+  border: 1px solid #eee;
+}
+
+.thumbnails {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+}
+
+.thumbnail {
+  width: 80px;
+  height: 80px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.thumbnail img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
-.expiry-badge {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  background-color: rgba(0,0,0,0.7);
-  color: white;
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 0.8rem;
+.thumbnail:hover {
+  border-color: #007bff;
 }
 
-.price-badge {
-  font-size: 1.2rem;
-  padding: 8px 15px;
+.card {
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-.product-title {
-  font-size: 2rem;
-  font-weight: 600;
+.card-header {
+  background-color: rgba(0,0,0,0.02);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 
-.description-section, .location-section, .expires-section {
-  background-color: #f9f9f9;
+.description-text {
+  white-space: pre-line;
+  line-height: 1.6;
+}
+
+.comment-item {
   padding: 15px;
   border-radius: 8px;
+  background-color: #f8f9fa;
 }
 
-.description-section h5, .location-section h5, .expires-section h5 {
-  font-size: 1.1rem;
-  margin-bottom: 10px;
+.comment-text {
+  margin-top: 5px;
+  white-space: pre-line;
 }
 
-.share-buttons {
-  margin-top: 20px;
-}
-
-.share-buttons h5 {
-  margin-bottom: 10px;
-}
-
-.rating-stars {
-  color: #ffc107;
-  font-size: 0.9rem;
-}
-
-.similar-products {
-  margin-top: 40px;
-  padding: 0 15px;
-}
-
-.similar-product-image {
-  height: 180px;
-  object-fit: cover;
-}
-
-.product-card {
-  cursor: pointer;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.product-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+.user-avatar img {
+  border: 1px solid #eee;
 }
 
 @media (max-width: 768px) {
-  .container {
-    padding: 15px;
-  }
-  
-  .product-title {
-    font-size: 1.5rem;
-  }
-  
-  .price-badge {
-    font-size: 1rem;
-    padding: 5px 10px;
+  .similar-deals {
+    grid-template-columns: 1fr;
   }
 }
 </style>
