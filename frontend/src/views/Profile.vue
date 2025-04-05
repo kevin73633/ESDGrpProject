@@ -572,7 +572,7 @@ export default {
             // Fetch ratings from the ratings API
             try {
               // Connect to your ratings API
-              const ratingsResponse = await axios.get(`${RATING_SERVICE_GET_URL}${userId}`);
+              const ratingsResponse = await axios.get(`${RATING_SERVICE_GET_URL}${userId}`, { withCredentials: false });
               if (ratingsResponse.data && ratingsResponse.data.Rating && Array.isArray(ratingsResponse.data.Rating)) {
                 // Process the ratings
                 const ratings = ratingsResponse.data.Rating;
