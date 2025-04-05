@@ -1,0 +1,90 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - id: 1504c63b-69c2-47a6-89d3-327ed1c31220
+    name: confirm_deal-service
+    url: http://confirm_deal:5100
+  
+  - id: 343bf7ef-9f9a-4bf1-b53a-f5e1c2bbd2d2
+    name: payment-service
+    url: http://payment:5031
+  
+  - id: c2df0152-0465-4e65-a23f-02695ada0622
+    name: report_user-service
+    url: http://report_user:5300
+  
+  - id: e3a5b95f-85cc-473b-8919-b5676bf6ffb4
+    name: verify_deal-service
+    url: http://verify_deal:5200
+
+routes:
+  - id: 3a54b195-4c5e-4437-8a9c-523fd157efee
+    name: ConfirmDeal
+    service: { id: "1504c63b-69c2-47a6-89d3-327ed1c31220" }
+    protocols: ["http","https"]
+    methods: ["POST"]
+    paths: ["/confirm_deal"]
+    strip_path: false
+    preserve_host: false
+    https_redirect_status_code: 426
+    regex_priority: 0
+    path_handling: "v0"
+    request_buffering: true
+    response_buffering: true
+  
+  - id: 90d2f6e9-a1e2-4d69-ba31-c2b8702e0715
+    name: Release
+    service: { id: "343bf7ef-9f9a-4bf1-b53a-f5e1c2bbd2d2" }
+    protocols: ["http","https"]
+    methods: ["POST"]
+    paths: ["/payment/release"]
+    strip_path: false
+    preserve_host: false
+    https_redirect_status_code: 426
+    regex_priority: 0
+    path_handling: "v0"
+    request_buffering: true
+    response_buffering: true
+  
+  - id: cbd28b0e-fc44-4e47-bac9-09b7d4b58195
+    name: Escrow
+    service: { id: "343bf7ef-9f9a-4bf1-b53a-f5e1c2bbd2d2" }
+    protocols: ["http","https"]
+    methods: ["POST"]
+    paths: ["/payment/escrow"]
+    strip_path: false
+    preserve_host: false
+    https_redirect_status_code: 426
+    regex_priority: 0
+    path_handling: "v0"
+    request_buffering: true
+    response_buffering: true
+  
+  - id: ea00d4a8-8cae-45e7-b845-d2efc4427149
+    name: ReportUser
+    service: { id: "c2df0152-0465-4e65-a23f-02695ada0622" }
+    protocols: ["http","https"]
+    methods: ["POST","OPTIONS"]
+    paths: ["/report_user"]
+    strip_path: false
+    preserve_host: false
+    https_redirect_status_code: 426
+    regex_priority: 0
+    path_handling: "v0"
+    request_buffering: true
+    response_buffering: true
+  
+  - id: f3902719-7791-4691-a1f8-67b57d142f65
+    name: VerifyDeal
+    service: { id: "e3a5b95f-85cc-473b-8919-b5676bf6ffb4" }
+    protocols: ["http","https"]
+    methods: ["POST","OPTIONS"]
+    paths: ["/verify_deal"]
+    strip_path: false
+    preserve_host: false
+    https_redirect_status_code: 426
+    regex_priority: 0
+    path_handling: "v0"
+    request_buffering: true
+    response_buffering: true
