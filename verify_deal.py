@@ -35,13 +35,13 @@ AWS_REGION = os.environ.get('AWS_REGION')
 RABBITMQ_HOST = os.environ.get('RABBITMQ_HOST', 'localhost')
 RABBITMQ_EXCHANGE = os.environ.get('RABBITMQ_EXCHANGE', 'deal_events')
 
-# def send_sms(phone_number, message):
-#     # return {
-#     #     "success" : True,
-#     #     "message_id" : 000
-#     # }
-#     """
-#     Send SMS to any phone number using Amazon SNS
+def send_sms(phone_number, message):
+    return {
+        "success" : True,
+        "message_id" : 000
+    }
+    """
+    Send SMS to any phone number using Amazon SNS
     
 #     Args:
 #         phone_number: Phone number in E.164 format (+6512345678)

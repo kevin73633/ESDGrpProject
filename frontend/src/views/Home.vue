@@ -303,7 +303,8 @@ import axios from 'axios';
 import { Modal, Toast } from 'bootstrap'; // Import Bootstrap components
 
 // Define API URL
-const PRODUCT_API_URL = 'http://localhost:8000'; // Using your product.py API port
+const PRODUCT_API_URL = 'http://localhost:5005'; // Using your product.py API port
+const DEAL_API_URL = 'http://localhost:5020'; // Using your product.py API port
 
 export default {
   name: 'HomePage',
@@ -446,7 +447,6 @@ export default {
         
         if (response.data.code === 200) {
           this.products = response.data.data.products;
-          
           // Extract unique categories from the products
           const uniqueCategories = [...new Set(this.products.map(product => product.category))];
           
