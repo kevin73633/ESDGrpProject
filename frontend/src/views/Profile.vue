@@ -477,6 +477,7 @@ import axios from 'axios';
 
 // API URL base - should match your backend
 const API_URL = 'http://localhost:5001';
+const RATING_SERVICE_GET_URL = "https://personal-nzmfqiqp.outsystemscloud.com/RatingAPI_REST/rest/v1/userRating/RatedID/?RatedID=";
 
 export default {
   name: 'ProfilePage',
@@ -515,10 +516,22 @@ export default {
     currentUserId() {
       // Get the user ID from route params or from session/localStorage
       return this.$route.params.uid || localStorage.getItem('uid');
+    },
+    
+    // Get top 3 recent reviews for display
+    topReviews() {
+      // First sort by date (newest first)
+      const sortedRatings = [...this.userRatings].sort((a, b) => 
+        new Date(b.date) - new Date(a.date)
+      );
+      
+      // Return only the first 3
+      return sortedRatings.slice(0, 3);
     }
   },
   methods: {
     // Fetch user profile data from API
+    // Update the fetchUserProfile method to handle the new rating data format
     async fetchUserProfile() {
       this.loading = true;
       this.error = null;
@@ -528,13 +541,23 @@ export default {
         const authResponse = await axios.get(`${API_URL}/check-auth`, { withCredentials: true });
         
         if (authResponse.data.code === 200 && authResponse.data.data.authenticated) {
-          const userId = this.currentUserId || authResponse.data.data.uid;
+          // Use the currentUserId computed property to get the user ID
+          const userId = this.currentUserId;
+          
+          if (!userId) {
+            this.error = "No user ID provided";
+            this.loading = false;
+            return;
+          }
           
           // If authenticated, fetch user profile
           const response = await axios.get(`${API_URL}/user/${userId}`, { withCredentials: true });
           
           if (response.data.code === 200) {
             this.user = response.data.data.user;
+            
+            // Make sure rating is a number
+            this.user.rating = Number(this.user.rating) || 0;
             
             // Also fetch phone number if not included in the main profile
             try {
@@ -544,6 +567,47 @@ export default {
               }
             } catch (phoneErr) {
               console.error('Error fetching phone:', phoneErr);
+            }
+            
+            // Fetch ratings from the ratings API
+            try {
+              // Connect to your ratings API
+              const ratingsResponse = await axios.get(`${RATING_SERVICE_GET_URL}${userId}`, { withCredentials: false });
+              if (ratingsResponse.data && ratingsResponse.data.Rating && Array.isArray(ratingsResponse.data.Rating)) {
+                // Process the ratings
+                const ratings = ratingsResponse.data.Rating;
+                
+                // Calculate average rating
+                if (ratings.length > 0) {
+                  const totalScore = ratings.reduce((sum, rating) => sum + rating.RatingScore, 0);
+                  this.user.rating = (totalScore / ratings.length).toFixed(1);
+                } else {
+                  this.user.rating = 0;
+                }
+                
+                // Format for the component's expected structure - without comments
+                this.userRatings = ratings.map(rating => ({
+                  stars: rating.RatingScore || 0,
+                  date: rating.CreatedAt || new Date().toISOString(),
+                  rater: {
+                    name: `User ${rating.RaterID}`, 
+                    avatar: null,
+                    id: rating.RaterID
+                  }
+                }));
+                
+                // Sort ratings by date (newest first)
+                this.userRatings.sort((a, b) => new Date(b.date) - new Date(a.date));
+              } else {
+                console.log('No ratings found or invalid response format');
+                this.userRatings = [];
+                this.user.rating = 0;
+              }
+            } catch (ratingsErr) {
+              console.error('Error fetching user ratings:', ratingsErr);
+              this.userRatings = [];
+              this.user.rating = 0;
+              // Don't set error, we'll just show "No ratings yet"
             }
           } else {
             this.error = response.data.message || 'Failed to load user profile';

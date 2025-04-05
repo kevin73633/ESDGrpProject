@@ -5,6 +5,7 @@ import Home from '../views/Home.vue';
 import DealDetails from '../views/DealDetails.vue';
 import Chat from '../views/Chat.vue';
 import Profile from '../views/Profile.vue';
+import OtherProfile from '../views/OtherProfile.vue';
 import Login from '../views/Login.vue';
 
 const routes = [
@@ -41,6 +42,12 @@ const routes = [
     path: '/profile',
     name: 'Profile',
     component: Profile,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/otherprofile/:id',
+    name: 'OtherProfile',
+    component: OtherProfile,
     meta: { requiresAuth: true }
   },
   // Catch-all redirect to login
