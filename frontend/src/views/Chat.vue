@@ -843,9 +843,18 @@ export default {
       return this.selectedChatUserId || "";
     },
 
-    // Handle deal confirmation result
     handleDealConfirmed(result) {
       console.log("Deal confirmed:", result);
+      
+    // Check if the result indicates insufficient funds
+    if (result.isInsufficientFunds) {
+        // Show an error notification about insufficient funds
+        this.showNotification({
+            message: result.error || 'Insufficient funds in your account. Please add funds to proceed.',
+            type: 'error'
+        });
+        return;
+    }
       
       // Update current deal status to confirmed
       if (this.currentDeal) {
@@ -874,7 +883,7 @@ export default {
 
     // Handle deal verified result
     handleDealVerified(data) {
-      console.log("Deal verified:", data);
+      console.log("Deal verified:", data); 
       
       // Update current deal status to verified
       if (this.currentDeal) {
@@ -928,11 +937,54 @@ export default {
       this.showConfirmationModal = false;
     },
     
-    confirmDeal() {
-      // Implement your deal confirmation logic here
-      this.dealDetails.status = 1;
-      this.dealConfirmed = true;
-      this.showConfirmationModal = false;
+    async confirmDeal() {
+      try {
+        // Make an API call to confirm the deal
+        const response = await axios.post(`/confirm_deal/${this.dealId}/${this.userId}`, {
+          // Any additional payload if needed
+        });
+
+        // If successful, update deal status
+        this.dealDetails.status = 1;
+        this.dealConfirmed = true;
+        this.showConfirmationModal = false;
+
+        // Emit success event
+        this.$emit('deal-confirmed', {
+          product: {
+            title: this.productTitle,
+            price: this.price
+          }
+        });
+      } catch (error) {
+        // Extract specific error message
+        const errorMessage = error.response?.data?.message || 
+                            'Failed to confirm deal';
+        
+        // Check for insufficient funds specifically
+        const isInsufficientFunds = errorMessage.toLowerCase().includes('insufficient funds');
+        
+        // If insufficient funds, show specific error
+        if (isInsufficientFunds) {
+          this.$emit('deal-confirmed', { 
+            error: 'Insufficient funds in your account. Please add funds to proceed.',
+            isInsufficientFunds: true,
+            product: {
+              title: this.productTitle,
+              price: this.price
+            }
+          });
+        } else {
+          // For other errors, emit generic error
+          this.$emit('deal-confirmed', { 
+            error: errorMessage,
+            product: {
+              title: this.productTitle,
+              price: this.price
+            }
+          });
+        }
+      }
     },
     
     getStatusBadgeClass() {
@@ -1143,5 +1195,46 @@ export default {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+.notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 15px;
+  border-radius: 5px;
+  z-index: 1000;
+  max-width: 90%;
+  text-align: center;
+}
+
+.notification.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.notification.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.notification.info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.close-notification {
+  background: none;
+  border: none;
+  color: inherit;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
 }
 </style>
