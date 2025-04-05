@@ -446,9 +446,12 @@ export default {
         
         if (response.data.code === 200) {
           this.products = response.data.data.products;
-          
+          var productList = [];
+          this.products.forEach(product => {
+            productList.push(product);
+          });
           // Extract unique categories from the products
-          const uniqueCategories = [...new Set(this.products.map(product => product.category))];
+          const uniqueCategories = [...new Set(productList.map(product => product.category))];
           
           // Update categories array if we have categories from the API
           if (uniqueCategories.length > 0) {

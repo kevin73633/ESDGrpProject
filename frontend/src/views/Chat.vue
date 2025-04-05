@@ -71,7 +71,7 @@
         <!-- Main content area -->
         <div class="col-md-9 d-flex flex-column" style="height: 100vh; overflow: hidden;">
           <!-- Deal Confirmation Banner (when confirmed) -->
-          <div v-if="currentDeal && currentDeal.status==1" class="alert alert-success mb-3 d-flex align-items-center">
+          <div v-if="currentDeal && currentDeal.status==3" class="alert alert-success mb-3 d-flex align-items-center">
             <i class="fas fa-check-circle me-2 fs-5"></i>
             <div>
               <strong>Deal Confirmed!</strong> 
