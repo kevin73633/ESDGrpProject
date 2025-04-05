@@ -20,12 +20,14 @@ CORS(app,
 
 # Define microservice URLs
 DEAL_SERVICE_URL = "http://deal:5020"
-PRODUCT_SERVICE_URL = "http://product:5005"
 USER_SERVICE_URL = "http://user:5001"
 PRODUCT_SERVICE_URL = "http://product:5005"
 PAYMENT_SERVICE_URL = "http://payment:5031"
 CHAT_SERVICE_URL = "http://chat:5087"
 CHATGPT_SERVICE_URL = "http://chatgpt:5002"
+REPORTLOG_SERVICE_URL = "http://reportLog:5004"
+RATING_SERVICE_POST_URL = "https://personal-nzmfqiqp.outsystemscloud.com/RatingAPI_REST/rest/v1/updateuserrating"
+RATING_SERVICE_GET_URL = "https://personal-nzmfqiqp.outsystemscloud.com/RatingAPI_REST/rest/v1/userRating/RatedID/?RatedID="
 
 # AWS Configuration
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
@@ -37,10 +39,10 @@ RABBITMQ_HOST = os.environ.get('RABBITMQ_HOST', 'localhost')
 RABBITMQ_EXCHANGE = os.environ.get('RABBITMQ_EXCHANGE', 'deal_events')
 
 def send_sms(phone_number, message):
-    # return {
-    #         "success": True,
-    #         "message_id": 000
-    #     }
+    return {
+            "success": True,
+            "message_id": 000
+        }
     """
     Send SMS to any phone number using Amazon SNS
     
@@ -101,6 +103,7 @@ def report_user():
     Report a user by orchestrating the entire user report flow
     """
     # Step 1: Get deal information
+    
     dealid = request.json['dealId']
     reason = request.json['Reason']
     currentuserid = request.json['UserID']
@@ -109,21 +112,15 @@ def report_user():
     deal_result = invoke_http(f"{DEAL_SERVICE_URL}/deal/{dealid}", method="GET")
     if deal_result["code"] != 200:return jsonify({"code": 404,"message": f"Deal {dealid} not found."}), 404
     deal_data = deal_result["data"]["deal"]
-    
-    
+
+
     chat_result = invoke_http(f"{CHAT_SERVICE_URL}/chat/getmessagebetween/{dealid}", method="GET")
     if chat_result["code"] != 200:return jsonify({"code": 404,"message": f"chat in {dealid} not found."}), 404
     chat_data = chat_result["data"]["messages"]
 
-
     chatgpt_result = invoke_http(f"{CHATGPT_SERVICE_URL}/analyze", method="POST", json={"message": chat_data})
     if chatgpt_result["code"] != 200:return jsonify({"code": 404,"message": f"chat in {dealid} not found."}), 404
     chatgpt_data = chatgpt_result["data"]['is_harmful']
-
-    # Step 3: Get buyer information
-    user_result = invoke_http(f"{USER_SERVICE_URL}/user/{currentuserid}", method="GET")
-    if user_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer {currentuserid} not found."}), 404
-    user_data = user_result["data"]["user"]
 
     reportLog_post_payload = {
         "UserID": currentuserid,
@@ -231,6 +228,10 @@ def report_user():
         json=update_seller_rating_payload
     )
     
+    
+    
+    
+    
     # Get buyer phone number (assuming you've added the endpoint in user.py)
     user_phone_result = invoke_http(f"{USER_SERVICE_URL}/user/getPhoneFromUser/{currentuserid}", method="GET")
     user_phone = None
@@ -244,17 +245,18 @@ def report_user():
         "event_type": "user_reported",
         "timestamp": datetime.now().isoformat(),
         "deal_id": dealid,
-        "buyer": {
-            "id": user_data["uid"],
-            "name": user_data["name"],
-            "rating": user_data["rating"],
+        "reporter": {
+            "id": currentuserid,
             "phone": user_phone
+        },
+        "reported": {
+            "id": reporteduserid,
         },
     }
     
     # Step 7: Send notifications via AMQP
     amqp_lib.publish_message(
-        routing_key="user.reported.notification",
+        routing_key="user.reported",
         message=notification_payload,
         exchange_name=RABBITMQ_EXCHANGE,
         hostname=RABBITMQ_HOST
@@ -263,14 +265,19 @@ def report_user():
     # Step 8: Send SMS notifications
     sms_results = {}
     if user_phone:
-        buyer_message = f"Your report against user {user_data['name']} has been received. Deal ID: {dealid}"
-        sms_results["buyer_sms"] = send_sms(user_phone, buyer_message)
+        message = f"Your report against user {reporteduserid} has been received. Deal ID: {dealid}"
+        sms_results["buyer_sms"] = send_sms(user_phone, message)
     
     # Return success response with combined data
     return jsonify({
         "code": 200,
         "message": "User reported successfully",
         "data": {
+            "reported_user": reporteduserid,
+            "reporter_user": currentuserid,
+            "deal_id": dealid,
+            "report_status": chatgpt_data,
+            "report_reason": reason,
             "notifications": {
                 "amqp_sent": True,
                 "sms_results": sms_results
