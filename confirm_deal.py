@@ -34,10 +34,10 @@ RABBITMQ_HOST = os.environ.get('RABBITMQ_HOST', 'localhost')
 RABBITMQ_EXCHANGE = os.environ.get('RABBITMQ_EXCHANGE', 'deal_events')
 
 def send_sms(phone_number, message):
-    # return {
-    #         "success": True,
-    #         "message_id": 000
-    #     }
+    return {
+            "success": True,
+            "message_id": 000
+        }
     """
     Send SMS to any phone number using Amazon SNS
     

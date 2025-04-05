@@ -447,7 +447,8 @@ export default {
         if (response.data.code === 200) {
           this.products = response.data.data.products;
           var productList = [];
-          this.products.forEach(product => {
+          this.products.forEach(async product => {
+            const productResponse = await axios.get(`${PRODUCT_API_URL}/products`);
             productList.push(product);
           });
           // Extract unique categories from the products
