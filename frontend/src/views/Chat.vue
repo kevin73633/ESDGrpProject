@@ -53,7 +53,11 @@
                     <div class="flex-grow-1">
                       <div class="d-flex justify-content-between">
                         <p class="fw-bold mb-0">{{ user.name }}</p>
-                        <p class="small text-muted">{{ user.lastMessageTime || '' }}</p>
+                        <div>
+                          <!-- Add a "Closed" badge if deal is closed -->
+                          <span v-if="user.dealStatus === 4" class="badge bg-secondary me-1">Closed</span>
+                          <p class="small text-muted d-inline">{{ user.lastMessageTime || '' }}</p>
+                        </div>
                       </div>
                       <p class="small text-muted text-truncate mb-0" style="max-width: 160px;">{{ user.lastMessage || 'No messages yet' }}</p>
                     </div>
@@ -66,6 +70,29 @@
         
         <!-- Main content area -->
         <div class="col-md-9 d-flex flex-column" style="height: 100vh; overflow: hidden;">
+          <!-- Deal Confirmation Banner (when confirmed) -->
+          <div v-if="currentDeal && currentDeal.status==3 " class="alert alert-success mb-3 d-flex align-items-center">
+            <i class="fas fa-check-circle me-2 fs-5"></i>
+            <div>
+              <strong>Deal Confirmed!</strong> 
+              <p class="mb-0 small">This deal has been confirmed and is now active.</p>
+            </div>
+            <div class="ms-auto">
+              <span class="badge bg-success">Confirmed</span>
+            </div>
+          </div>
+
+          <!-- Deal Confirmation Banner (when confirmed) -->
+          <div v-if="currentDeal && currentDeal.status==4" class="alert alert-success mb-3 d-flex align-items-center">
+            <i class="fas fa-check-circle me-2 fs-5"></i>
+            <div>
+              <strong>Deal Verified!</strong> 
+              <p class="mb-0 small">This deal has been verified and is now closed.</p>
+            </div>
+            <div class="ms-auto">
+              <span class="badge bg-success">Verified</span>
+            </div>
+          </div>
           <!-- Header with user info -->
           <div class="p-3 border-bottom">
             <div class="d-flex justify-content-between align-items-center">
@@ -100,17 +127,6 @@
           
           <!-- Chat content area (scrollable) -->
           <div ref="chatContent" class="flex-grow-1 overflow-auto p-3" id="chat-content">
-            <!-- Deal Confirmation Banner (when confirmed) -->
-            <div v-if="currentDeal && currentDeal.status==1" class="alert alert-success mb-3 d-flex align-items-center">
-              <i class="fas fa-check-circle me-2 fs-5"></i>
-              <div>
-                <strong>Deal Confirmed!</strong> 
-                <p class="mb-0 small">This deal has been confirmed and is now active.</p>
-              </div>
-              <div class="ms-auto">
-                <span class="badge bg-success">Confirmed</span>
-              </div>
-            </div>
           
             <!-- Deal card (if applicable) -->
             <div class="card mb-3" v-if="currentDeal && currentDeal.id">
@@ -221,7 +237,10 @@
             
             <!-- Message input form -->
             <form @submit.prevent="sendMessage" class="w-100">
-              <div class="input-group">
+              <div v-if="isMessagingDisabled" class="alert alert-secondary">
+                This conversation is closed as the deal has been completed.
+              </div>
+              <div v-if="!isMessagingDisabled"class="input-group">
                 <input 
                   v-model="newMessage" 
                   type="text" 
@@ -332,8 +351,14 @@ export default {
     
     // Determine if we can show the report button
     canShowReportButton() {
-      if (!this.currentDeal) return false;
+    if (!this.currentDeal) return false;
+      if (this.currentDeal.status === 4) return false; // Don't show report button for closed deals
       return this.selectedChatUserId && this.currentUserId && this.selectedChatUserId !== this.currentUserId;
+    },
+    
+    // Add new computed property to check if messaging is disabled
+    isMessagingDisabled() {
+      return this.currentDeal && this.currentDeal.status === 4;
     }
   },
   mounted() {
@@ -496,7 +521,6 @@ export default {
                     }
                   }
                   
-                  // Add to chat users with fallback data if needed
                   this.chatUsers.push({
                     uid: userData.uid,
                     name: userData.name,
@@ -522,7 +546,8 @@ export default {
                     lastMessage: '',
                     lastMessageTime: '',
                     rating: 0,
-                    dealid: deal.dealid
+                    dealid: deal.dealid,
+                    dealStatus: deal.status
                   });
                   
                   console.log(`Added placeholder user for ID ${otherUserId}`);
@@ -630,6 +655,11 @@ export default {
                 imageUrl: productData.image_url || null
               }
             };
+
+            const chatUser = this.chatUsers.find(user => user.dealid === dealId);
+              if (chatUser) {
+                chatUser.dealStatus = dealData.status;
+              }
           } else {
             // Deal exists but product details couldn't be fetched
             this.currentDeal = {
@@ -645,6 +675,10 @@ export default {
                 description: 'Product details unavailable'
               }
             };
+            const chatUser = this.chatUsers.find(user => user.dealid === dealId);
+            if (chatUser) {
+              chatUser.dealStatus = dealData.status;
+            }
           }
         } else {
           this.currentDeal = null;
@@ -725,6 +759,14 @@ export default {
     // Send message methods
     async sendMessage() {
       // Validate message content
+      if (this.isMessagingDisabled) {
+        this.showNotification({
+          message: "This conversation is closed as the deal has been completed.",
+          type: "warning"
+        });
+        return;
+      }
+
       if (!this.newMessage.trim()) {
         this.validationError = "Please enter a message";
         return;
@@ -772,6 +814,15 @@ export default {
     },
     
     sendQuickReply(text) {
+      // Check if messaging is disabled for closed deals
+      if (this.isMessagingDisabled) {
+        this.showNotification({
+          message: "This conversation is closed as the deal has been completed.",
+          type: "warning"
+        });
+        return;
+      }
+      
       // Set the text in the input field
       this.newMessage = text;
       // Send the message
