@@ -127,7 +127,7 @@
   </template>
   
   <script>
-    const DEAL_API_URL = 'http://localhost:5020'; 
+    const DEAL_API_URL = 'http://localhost:8000'; 
     const VERIFY_DEAL_API_URL = 'http://localhost:8000/verify_deal';
     import axios from 'axios';
     

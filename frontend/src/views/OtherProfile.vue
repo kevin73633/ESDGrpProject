@@ -243,7 +243,7 @@
   import axios from 'axios';
   
   // API URL base - should match your backend
-  const API_URL = 'http://localhost:5001';
+  const API_URL = 'http://localhost:8000';
   const RATING_SERVICE_GET_URL = "https://personal-nzmfqiqp.outsystemscloud.com/RatingAPI_REST/rest/v1/userRating/RatedID/?RatedID=";
   
   export default {
@@ -312,7 +312,7 @@
                 // Fetch ratings from the ratings API
                 try {
                 // Connect to your ratings Flask API - use a different URL for ratings
-                const ratingsResponse = await axios.get(`http://localhost:5003/userRating/${userId}`);
+                const ratingsResponse = await axios.get(`${RATING_SERVICE_GET_URL}${userId}`, { withCredentials: false });
                 
                 if (ratingsResponse.data && Array.isArray(ratingsResponse.data)) {
                     // Map the API response to match our component's expected format

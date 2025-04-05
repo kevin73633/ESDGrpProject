@@ -2,57 +2,44 @@ _format_version: "3.0"
 _transform: true
 
 services:
+  # Existing services to keep
   - id: 1504c63b-69c2-47a6-89d3-327ed1c31220
     name: confirm_deal-service
     url: http://confirm_deal:5100
-  
-  - id: 343bf7ef-9f9a-4bf1-b53a-f5e1c2bbd2d2
-    name: payment-service
-    url: http://payment:5031
-  
+    
   - id: c2df0152-0465-4e65-a23f-02695ada0622
     name: report_user-service
     url: http://report_user:5300
-  
+    
   - id: e3a5b95f-85cc-473b-8919-b5676bf6ffb4
     name: verify_deal-service
     url: http://verify_deal:5200
+  
+  # New services from the data
+  - id: 7b86eb20-72cf-4002-acba-2d598cab0adc
+    name: user-service
+    url: http://user:5000  # Assuming port based on convention
+    
+  - id: 80067d7f-ccdd-4390-b19a-a7f5e7dc550b
+    name: chat-service
+    url: http://chat:5400  # Assuming port based on convention
+    
+  - id: 2ca26b1f-14ae-4698-be0e-91f6f3e6dbe6
+    name: products-service
+    url: http://products:5500  # Assuming port based on convention
+    
+  - id: ea9cd0ad-114a-4489-89fb-80686e043ec5
+    name: deal-service
+    url: http://deal:5600  # Assuming port based on convention
 
 routes:
+  # Existing routes to keep
   - id: 3a54b195-4c5e-4437-8a9c-523fd157efee
     name: ConfirmDeal
     service: { id: "1504c63b-69c2-47a6-89d3-327ed1c31220" }
     protocols: ["http","https"]
-    methods: ["POST"]
+    methods: ["POST","OPTIONS"]
     paths: ["/confirm_deal"]
-    strip_path: false
-    preserve_host: false
-    https_redirect_status_code: 426
-    regex_priority: 0
-    path_handling: "v0"
-    request_buffering: true
-    response_buffering: true
-  
-  - id: 90d2f6e9-a1e2-4d69-ba31-c2b8702e0715
-    name: Release
-    service: { id: "343bf7ef-9f9a-4bf1-b53a-f5e1c2bbd2d2" }
-    protocols: ["http","https"]
-    methods: ["POST"]
-    paths: ["/payment/release"]
-    strip_path: false
-    preserve_host: false
-    https_redirect_status_code: 426
-    regex_priority: 0
-    path_handling: "v0"
-    request_buffering: true
-    response_buffering: true
-  
-  - id: cbd28b0e-fc44-4e47-bac9-09b7d4b58195
-    name: Escrow
-    service: { id: "343bf7ef-9f9a-4bf1-b53a-f5e1c2bbd2d2" }
-    protocols: ["http","https"]
-    methods: ["POST"]
-    paths: ["/payment/escrow"]
     strip_path: false
     preserve_host: false
     https_redirect_status_code: 426
@@ -81,6 +68,161 @@ routes:
     protocols: ["http","https"]
     methods: ["POST","OPTIONS"]
     paths: ["/verify_deal"]
+    strip_path: false
+    preserve_host: false
+    https_redirect_status_code: 426
+    regex_priority: 0
+    path_handling: "v0"
+    request_buffering: true
+    response_buffering: true
+  
+  # New routes from the data
+  - id: 710ab517-0be5-40d4-bdde-1c7cf66ed881
+    name: Login
+    service: { id: "7b86eb20-72cf-4002-acba-2d598cab0adc" }
+    protocols: ["http","https"]
+    methods: ["POST","OPTIONS"]
+    paths: ["/login"]
+    strip_path: false
+    preserve_host: false
+    https_redirect_status_code: 426
+    regex_priority: 0
+    path_handling: "v0"
+    request_buffering: true
+    response_buffering: true
+    
+  - id: 916f9be3-1a54-4177-8d2c-5045e35d6427
+    name: Logout
+    service: { id: "7b86eb20-72cf-4002-acba-2d598cab0adc" }
+    protocols: ["http","https"]
+    methods: ["POST","OPTIONS"]
+    paths: ["/logout"]
+    strip_path: false
+    preserve_host: false
+    https_redirect_status_code: 426
+    regex_priority: 0
+    path_handling: "v0"
+    request_buffering: true
+    response_buffering: true
+    
+  - id: 7500058c-dfc0-4fb8-8281-b887de18a793
+    name: CheckAuth
+    service: { id: "7b86eb20-72cf-4002-acba-2d598cab0adc" }
+    protocols: ["http","https"]
+    methods: ["GET"]
+    paths: ["/check-auth"]
+    strip_path: false
+    preserve_host: false
+    https_redirect_status_code: 426
+    regex_priority: 0
+    path_handling: "v0"
+    request_buffering: true
+    response_buffering: true
+    
+  - id: 513ed3c6-86fc-4673-8f04-fa6e3645a1e5
+    name: User
+    service: { id: "7b86eb20-72cf-4002-acba-2d598cab0adc" }
+    protocols: ["http","https"]
+    methods: ["GET"]
+    paths: ["/user"]
+    strip_path: false
+    preserve_host: false
+    https_redirect_status_code: 426
+    regex_priority: 0
+    path_handling: "v0"
+    request_buffering: true
+    response_buffering: true
+    
+  - id: c57c1d15-f39a-429c-bbff-9cc5bb3a46ec
+    name: GetPhoneFromUser
+    service: { id: "7b86eb20-72cf-4002-acba-2d598cab0adc" }
+    protocols: ["http","https"]
+    methods: ["GET"]
+    paths: ["/user/getPhoneFromUser"]
+    strip_path: false
+    preserve_host: false
+    https_redirect_status_code: 426
+    regex_priority: 0
+    path_handling: "v0"
+    request_buffering: true
+    response_buffering: true
+    
+  - id: 236368a2-cf2c-4bc1-8a9e-abc45cb183f2
+    name: GetMessageBetween
+    service: { id: "80067d7f-ccdd-4390-b19a-a7f5e7dc550b" }
+    protocols: ["http","https"]
+    methods: ["GET"]
+    paths: ["/chat/getmessagebetween"]
+    strip_path: false
+    preserve_host: false
+    https_redirect_status_code: 426
+    regex_priority: 0
+    path_handling: "v0"
+    request_buffering: true
+    response_buffering: true
+    
+  - id: 457333ce-29d3-4941-8f85-a5bda5698130
+    name: Send
+    service: { id: "80067d7f-ccdd-4390-b19a-a7f5e7dc550b" }
+    protocols: ["http","https"]
+    methods: ["POST","OPTIONS"]
+    paths: ["/chat/send"]
+    strip_path: false
+    preserve_host: false
+    https_redirect_status_code: 426
+    regex_priority: 0
+    path_handling: "v0"
+    request_buffering: true
+    response_buffering: true
+    
+  - id: 0f7b1452-f026-4601-a083-8c3ca167db18
+    name: Products
+    service: { id: "2ca26b1f-14ae-4698-be0e-91f6f3e6dbe6" }
+    protocols: ["http","https"]
+    methods: ["GET","PUT","POST","DELETE","OPTIONS"]
+    paths: ["/products"]
+    strip_path: false
+    preserve_host: false
+    https_redirect_status_code: 426
+    regex_priority: 0
+    path_handling: "v0"
+    request_buffering: true
+    response_buffering: true
+    
+  - id: 5af0c410-f486-4ec6-bd17-897dd7d7dffc
+    name: ProductsCategory
+    service: { id: "2ca26b1f-14ae-4698-be0e-91f6f3e6dbe6" }
+    protocols: ["http","https"]
+    methods: ["GET"]
+    paths: ["/products/category"]
+    strip_path: false
+    preserve_host: false
+    https_redirect_status_code: 426
+    regex_priority: 0
+    path_handling: "v0"
+    request_buffering: true
+    response_buffering: true
+    
+  - id: 789d038e-6e13-4b72-ad51-94b6ddaa1ee5
+    name: Deal
+    service: { id: "ea9cd0ad-114a-4489-89fb-80686e043ec5" }
+    protocols: ["http","https"]
+    methods: ["GET"]
+    paths: ["/deal"]
+    strip_path: false
+    preserve_host: false
+    https_redirect_status_code: 426
+    regex_priority: 0
+    path_handling: "v0"
+    request_buffering: true
+    response_buffering: true
+    
+  - id: 627cb93d-9a78-4610-bd9d-b3031a5fa302
+    name: GetDealWithUser
+    service: { id: "ea9cd0ad-114a-4489-89fb-80686e043ec5" }
+    protocols: ["http","https"]
+    methods: ["GET"]
+    paths: ["/get_deals_with_user"]
     strip_path: false
     preserve_host: false
     https_redirect_status_code: 426
