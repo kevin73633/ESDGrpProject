@@ -214,30 +214,22 @@
                   </div>
                   
                   <div class="mb-3">
-                    <label for="dealImage" class="form-label">Upload Image</label>
-                    <div class="input-group">
-                      <input 
-                        type="file" 
-                        class="form-control" 
-                        id="dealImage" 
-                        @change="handleImageUpload"
-                        accept="image/*"
-                      />
-                      <button 
-                        v-if="newDeal.imagePreview" 
-                        class="btn btn-outline-secondary" 
-                        type="button"
-                        @click="clearImage"
-                      >
-                        Clear
-                      </button>
-                    </div>
-                    <div class="form-text">Max file size: 5MB. Recommended size: 800x600px</div>
+                    <label for="dealImage" class="form-label">Image URL</label>
+                    <input 
+                      type="url" 
+                      class="form-control" 
+                      id="dealImage" 
+                      v-model="newDeal.image_url"
+                      @input="handleImageUpload"
+                      placeholder="Enter image URL"
+                    />
+                    <div class="form-text">Paste a direct link to an image</div>
                   </div>
-                  
+
                   <div v-if="newDeal.imagePreview" class="mb-3 image-preview-container">
                     <img :src="newDeal.imagePreview" alt="Deal preview" class="img-preview">
                   </div>
+                
                 </div>
               </div>
               
@@ -332,7 +324,7 @@ export default {
         location: "",
         price: "",
         expiresAt: "",
-        image: null,
+        image_url: "",
         imagePreview: null
       },
       validationErrors: {},
@@ -472,7 +464,12 @@ export default {
     getProductImage(product) {
       // Check if product has an image property
       // If not, return a placeholder
-      return product.image || `/api/placeholder/300/150`;
+      const placeholderUrl = '/default-placeholder.jpg';
+  
+      // Validate and return image URL
+      return product.image_url && product.image_url.trim() 
+        ? product.image_url 
+        : placeholderUrl;
     },
     
     // Format price to 2 decimal places
@@ -499,7 +496,7 @@ export default {
         location: "",
         price: "",
         expiresAt: "",
-        image: null,
+        image_url: null,
         imagePreview: null
       };
       this.validationErrors = {};
@@ -515,32 +512,35 @@ export default {
       }
     },
     handleImageUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
+      const imageUrl = event.target.value;
       
-      // Validate file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
-        alert("File is too large. Maximum size is 5MB.");
-        event.target.value = ""; // Clear the input
-        return;
+      // Validate URL
+      if (this.isValidUrl(imageUrl)) {
+        this.newDeal.image_url = imageUrl;
+        this.newDeal.imagePreview = imageUrl;
+      } else {
+        this.newDeal.image_url = "";
+        this.newDeal.imagePreview = null;
+        alert("Please enter a valid image URL");
       }
-      
-      // Save file reference
-      this.newDeal.image = file;
-      
-      // Create a preview
-      const reader = new FileReader();
-      reader.onload = e => {
-        this.newDeal.imagePreview = e.target.result;
-      };
-      reader.readAsDataURL(file);
     },
+
+    // Add URL validation method
+    isValidUrl(url) {
+      try {
+        new URL(url);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+
     clearImage() {
-      this.newDeal.image = null;
+      this.newDeal.image_url = "";
       this.newDeal.imagePreview = null;
-      // Reset the file input
-      const fileInput = document.getElementById('dealImage');
-      if (fileInput) fileInput.value = "";
+      // Reset the URL input
+      const urlInput = document.getElementById('dealImage');
+      if (urlInput) urlInput.value = "";
     },
     async submitDeal() {
       // Reset validation errors
@@ -553,6 +553,11 @@ export default {
           this.errorToast.show();
         }
         return;
+      }
+
+      if (this.newDeal.image_url && !this.isValidUrl(this.newDeal.image_url)) {
+        this.validationErrors.image_url = "Please enter a valid image URL";
+        isValid = false;
       }
       
       // Validate form data
@@ -606,7 +611,8 @@ export default {
           location: this.newDeal.location,
           price: parseFloat(this.newDeal.price),
           userid: this.currentUserId,
-          expires_at: this.newDeal.expiresAt || null
+          expires_at: this.newDeal.expiresAt || null,
+          image_url: this.newDeal.image_url || '' 
         };
         
         // POST to API

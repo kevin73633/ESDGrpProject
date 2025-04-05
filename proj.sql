@@ -195,16 +195,17 @@ CREATE TABLE IF NOT EXISTS `Product` (
   `price` DECIMAL(10, 2) NOT NULL,
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   `expires_at` DATETIME,
-  `userid` varchar(64) NOT NULL
+  `userid` varchar(64) NOT NULL,
+  `image_url` VARCHAR(500) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- Now insert the sample data into the Product table
-INSERT INTO `Product` (`productid`, `title`, `category`, `description`, `location`, `price`, `created_at`, `expires_at`, `userid`) VALUES
-(1, '1-for-1 Bubble Tea', 'food', 'Looking for someone to share a bubble tea deal. Valid at all outlets until end of month.', 'Downtown', 5.00, DATE_SUB(NOW(), INTERVAL 1 HOUR), DATE_ADD(NOW(), INTERVAL 7 DAY), '12345678'),
-(2, 'Donut Box for $15', 'food', 'Need someone to share a box of donuts. 12 pieces of assorted flavors.', 'North Campus', 15.00, DATE_SUB(NOW(), INTERVAL 1 DAY), NULL, '22345678'),
-(3, '50% Off Bluetooth Earbuds', 'electronics', 'I have a coupon for 50% off wireless earbuds at TechStore. Looking to share with someone.', 'East Mall', 25.00, DATE_SUB(NOW(), INTERVAL 2 DAY), NULL, '32345678'),
-(4, 'Buy 2 Get 1 Free Books', 'books', 'Bookstore promotion, buy 2 books and get 1 free. Lets pool together to maximize the deal.', 'Central Library', 30.00, DATE_SUB(NOW(), INTERVAL 3 DAY), NULL, '42345678'),
-(5, 'Movie Ticket 2-for-1 Special', 'entertainment', 'Cinema offering buy one get one free tickets for weekday showings. Looking for a movie buddy.', 'Westfield Mall', 12.50, DATE_SUB(NOW(), INTERVAL 4 DAY), DATE_ADD(NOW(), INTERVAL 14 DAY), '52345678');
+INSERT INTO `Product` (`productid`, `title`, `category`, `description`, `location`, `price`, `created_at`, `expires_at`, `userid`, `image_url`) VALUES
+(1, '1-for-1 Bubble Tea', 'food', 'Looking for someone to share a bubble tea deal. Valid at all outlets until end of month.', 'Downtown', 5.00, DATE_SUB(NOW(), INTERVAL 1 HOUR), DATE_ADD(NOW(), INTERVAL 7 DAY), '12345678', 'https://singaporepromo.com/wp-content/uploads/2023/05/The-Whale-Tea-1-FOR-1-Bubble-Tea-Singapore-Promo-750x750.jpg'),
+(2, 'Donut Box for $15', 'food', 'Need someone to share a box of donuts. 12 pieces of assorted flavors.', 'North Campus', 15.00, DATE_SUB(NOW(), INTERVAL 1 DAY), NULL, '22345678', 'https://i.pinimg.com/736x/f7/62/15/f76215e8083e53aad9d62abed0ad3fcd--dunkin-donuts-a-box.jpg'),
+(3, '50% Off Bluetooth Earbuds', 'electronics', 'I have a coupon for 50% off wireless earbuds at TechStore. Looking to share with someone.', 'East Mall', 25.00, DATE_SUB(NOW(), INTERVAL 2 DAY), NULL, '32345678', 'https://m.media-amazon.com/images/I/41U5I2VdKyL._SL500_.jpg'),
+(4, 'Buy 2 Get 1 Free Books', 'books', 'Bookstore promotion, buy 2 books and get 1 free. Lets pool together to maximize the deal.', 'Central Library', 30.00, DATE_SUB(NOW(), INTERVAL 3 DAY), NULL, '42345678', 'https://i.pinimg.com/originals/67/66/e4/6766e4f0eb3e63b8a32917bf89900984.png'),
+(5, 'Movie Ticket 2-for-1 Special', 'entertainment', 'Cinema offering buy one get one free tickets for weekday showings. Looking for a movie buddy.', 'Westfield Mall', 12.50, DATE_SUB(NOW(), INTERVAL 4 DAY), DATE_ADD(NOW(), INTERVAL 14 DAY), '52345678', 'https://th.bing.com/th/id/OIP.nakZ6nFslD14jbiDo8X-9wHaHa?rs=1&pid=ImgDetMain');
 COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
