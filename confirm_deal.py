@@ -106,32 +106,21 @@ def confirm_deal(dealid, currentuserid):
     product_result = invoke_http(f"{PRODUCT_SERVICE_URL}/products/{deal_data['productid']}", method="GET")
     if product_result["code"] != 200:return jsonify({"code": 404,"message": f"Product {deal_data['productid']} not found."}), 404
     product_data = product_result["data"]["product"]
-    
-    userToFetch = ""
-    if (deal_data['buyerid'] == currentuserid):
-        userToFetch = "buyerid"
-    elif (deal_data['sellerid'] == currentuserid):
-        userToFetch = "sellerid"
-    # Step 3: Get buyer information
-    user_result = invoke_http(f"{USER_SERVICE_URL}/user/{deal_data[userToFetch]}", method="GET")
-    if user_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer {deal_data[userToFetch]} not found."}), 404
-    user_data = user_result["data"]["user"]
-
-    # Get buyer account number
-    user_account_result = invoke_http(f"{USER_SERVICE_URL}/user/getAccNumFromUser/{deal_data[userToFetch]}", method="GET")
-    if user_account_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer account information not found."}), 404
-    user_account = user_account_result["data"]["AccNum"]
 
     # Get buyer phone number (assuming you've added the endpoint in user.py)
-    user_phone_result = invoke_http(f"{USER_SERVICE_URL}/user/getPhoneFromUser/{deal_data[userToFetch]}", method="GET")
+    user_phone_result = invoke_http(f"{USER_SERVICE_URL}/user/getPhoneFromUser/{currentuserid}", method="GET")
     user_phone = None
     if user_phone_result["code"] == 200:
         user_phone = user_phone_result["data"]["phone"]
 
 
-    update_deal_result = None
+    update_deal_payload = {}
     payment_result_string = None
     if (deal_data['buyerid'] == currentuserid):
+        # Get buyer account number
+        user_account_result = invoke_http(f"{USER_SERVICE_URL}/user/getAccNumFromUser/{currentuserid}", method="GET")
+        if user_account_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer account information not found."}), 404
+        user_account = user_account_result["data"]["AccNum"]
         # Step 4: Process payment (escrow)
         payment_payload = {
             "accnum": user_account,
@@ -149,16 +138,11 @@ def confirm_deal(dealid, currentuserid):
                 "message": f"Payment failed: {payment_result['message']}"
             }), payment_result["code"]
         # Step 5: Update deal status to confirmed
-        update_deal_payload = {}
+        
         if (deal_data['status'] == 2):
             update_deal_payload = {"status": 3}
         else:
             update_deal_payload = {"status": 1}
-        update_deal_result = invoke_http(
-            f"{DEAL_SERVICE_URL}/deal/{dealid}/status",
-            method="PUT",
-            json=update_deal_payload
-        )
         payment_result_string = payment_result["transaction"]
     elif (deal_data['sellerid'] == currentuserid):
         update_deal_payload = {}
@@ -166,14 +150,12 @@ def confirm_deal(dealid, currentuserid):
             update_deal_payload = {"status": 3}
         else:
             update_deal_payload = {"status": 2}
-    
-        update_deal_result = invoke_http(
+        payment_result_string = "None"
+    update_deal_result = invoke_http(
             f"{DEAL_SERVICE_URL}/deal/{dealid}/status",
             method="PUT",
             json=update_deal_payload
         )
-        payment_result_string = "None"
-    
     if update_deal_result["code"] != 200:
         # Payment was successful but deal status update failed
         # We should implement compensating transaction here (refund)
@@ -194,8 +176,6 @@ def confirm_deal(dealid, currentuserid):
                 "price": product_data["price"]
             },
             "buyer": {
-                "id": user_data["uid"],
-                "name": user_data["name"],
                 "phone": user_phone
             },
             "payment": {
@@ -216,8 +196,6 @@ def confirm_deal(dealid, currentuserid):
                 "price": product_data["price"]
             },
             "seller": {
-                "id": user_data["uid"],
-                "name": user_data["name"],
                 "phone": user_phone
             }
         }
