@@ -88,6 +88,24 @@ def get_deals_with_user(userid):
             "message": "There are no deals."
         }
     ), 404
+@app.route("/get_deal_with_product/<string:productid>", methods=['GET'])
+def get_deal_with_product(productid):
+    deal = db.session.scalar(db.select(Deal).filter_by(productid=productid))
+    if deal:
+        return jsonify(
+            {
+                "code": 200,
+                "data": {
+                    "deal": deal.json()
+                }
+            }
+        )
+    return jsonify(
+        {
+            "code": 404,
+            "message": "There is no deal."
+        }
+    ), 404
 @app.route("/deal/<string:dealid>", methods=['GET'])
 def get_single_deal(dealid):
     deal = db.session.scalar(db.select(Deal).filter_by(dealid=dealid))
@@ -109,11 +127,12 @@ def get_single_deal(dealid):
 #
 # New endpoint to update deal status
 # deal statuses
+# -1 = reported deal, closed
 # 0 = unconfirmed both sides
 # 1 = confirmed and paid buyer side
 # 2 = confirmed seller side
 # 3 = confirmed both sides
-# 4 = verified buyer side
+# 4 = verified both sides, closed
 @app.route("/deal/<string:dealid>/status", methods=['PUT'])
 def update_deal_status(dealid):
     deal = db.session.scalar(db.select(Deal).filter_by(dealid=dealid))

@@ -304,6 +304,7 @@ import { Modal, Toast } from 'bootstrap'; // Import Bootstrap components
 
 // Define API URL
 const PRODUCT_API_URL = 'http://localhost:5005'; // Using your product.py API port
+const DEAL_API_URL = 'http://localhost:5020'; // Using your product.py API port
 
 export default {
   name: 'HomePage',
@@ -446,13 +447,8 @@ export default {
         
         if (response.data.code === 200) {
           this.products = response.data.data.products;
-          var productList = [];
-          this.products.forEach(async product => {
-            const productResponse = await axios.get(`${PRODUCT_API_URL}/products`);
-            productList.push(product);
-          });
           // Extract unique categories from the products
-          const uniqueCategories = [...new Set(productList.map(product => product.category))];
+          const uniqueCategories = [...new Set(this.products.map(product => product.category))];
           
           // Update categories array if we have categories from the API
           if (uniqueCategories.length > 0) {
