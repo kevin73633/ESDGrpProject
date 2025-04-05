@@ -22,6 +22,8 @@ CORS(app,
 DEAL_SERVICE_URL = "http://deal:5020"
 PRODUCT_SERVICE_URL = "http://product:5005"
 USER_SERVICE_URL = "http://user:5001"
+PRODUCT_SERVICE_URL = "http://product:5005"
+PAYMENT_SERVICE_URL = "http://payment:5031"
 CHAT_SERVICE_URL = "http://chat:5087"
 CHATGPT_SERVICE_URL = "http://chatgpt:5002"
 
@@ -100,9 +102,15 @@ def report_user():
     """
     # Step 1: Get deal information
     dealid = request.json['dealId']
+    reason = request.json['Reason']
     currentuserid = request.json['UserID']
     reporteduserid = request.json['ReportedUserID']
 
+    deal_result = invoke_http(f"{DEAL_SERVICE_URL}/deal/{dealid}", method="GET")
+    if deal_result["code"] != 200:return jsonify({"code": 404,"message": f"Deal {dealid} not found."}), 404
+    deal_data = deal_result["data"]["deal"]
+    
+    
     chat_result = invoke_http(f"{CHAT_SERVICE_URL}/chat/getmessagebetween/{dealid}", method="GET")
     if chat_result["code"] != 200:return jsonify({"code": 404,"message": f"chat in {dealid} not found."}), 404
     chat_data = chat_result["data"]["messages"]
@@ -112,12 +120,117 @@ def report_user():
     if chatgpt_result["code"] != 200:return jsonify({"code": 404,"message": f"chat in {dealid} not found."}), 404
     chatgpt_data = chatgpt_result["data"]['is_harmful']
 
-    
     # Step 3: Get buyer information
     user_result = invoke_http(f"{USER_SERVICE_URL}/user/{currentuserid}", method="GET")
     if user_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer {currentuserid} not found."}), 404
     user_data = user_result["data"]["user"]
 
+    reportLog_post_payload = {
+        "UserID": currentuserid,
+        "ReportedUserID": reporteduserid,
+        "Reason": reason,
+        "Status": chatgpt_data
+    }
+    reportLog_post_result = invoke_http(
+        f"{REPORTLOG_SERVICE_URL}/reportLog",
+        method="POST",
+        json=reportLog_post_payload
+    )
+    if reportLog_post_result["code"] != 200:
+        return jsonify({
+            "code": 404,
+            "message": f"Rating failed: {reportLog_post_result['error']}"
+        }), 404
+    
+    payment_result_string = None
+    # refund deal if reported
+    if (deal_data['status'] == 1 or deal_data['status'] == 3):
+        print("Refund")
+        
+        # Step 2: Get product details
+        product_result = invoke_http(f"{PRODUCT_SERVICE_URL}/products/{deal_data['productid']}", method="GET")
+        if product_result["code"] != 200:return jsonify({"code": 404,"message": f"Product {deal_data['productid']} not found."}), 404
+        product_data = product_result["data"]["product"]
+
+        # Get buyer account number
+        user_account_result = invoke_http(f"{USER_SERVICE_URL}/user/getAccNumFromUser/{deal_data["buyerid"]}", method="GET")
+        if user_account_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer account information not found."}), 404
+        user_account = user_account_result["data"]["AccNum"]
+        # Step 4: Process payment (escrow)
+        payment_payload = {
+            "accnum": user_account,
+            "amount": product_data["price"]
+        }
+        
+        payment_result = invoke_http(
+            f"{PAYMENT_SERVICE_URL}/payment/refund",
+            method="POST",
+            json=payment_payload
+        )
+        if payment_result["code"] != 200:
+            return jsonify({
+                "code": payment_result["code"],
+                "message": f"Payment failed: {payment_result['message']}"
+            }), payment_result["code"]
+        payment_result_string = payment_result["transaction"]
+        # implement compensating transaction here (refund) and set status to -1
+
+    update_deal_payload = {"status": -1}
+    update_deal_result = invoke_http(
+        f"{DEAL_SERVICE_URL}/deal/{dealid}/status",
+        method="PUT",
+        json=update_deal_payload
+    )
+    if chatgpt_data == False:
+        return jsonify({
+            "code": 200,
+            "message": "User report not harmful",
+            "payment" : payment_result_string,
+            "data": {
+                "is_harmful": chatgpt_data
+            }
+        })
+    # Step 5: Post rating to the rating service
+    rating_post_payload = {
+        "CreatedAt": datetime.now().isoformat(),
+        "RaterID": currentuserid,
+        "RatedID": reporteduserid,
+        "DealID": dealid,
+        "RatingScore": 0,
+        "RatingType": "report"
+    }
+    rating_post_result = invoke_http(
+        f"{RATING_SERVICE_POST_URL}",
+        method="POST",
+        json=rating_post_payload
+    )
+    if rating_post_result["Success"] != True:
+        return jsonify({
+            "code": 404,
+            "message": f"Rating failed: {rating_post_result['ErrorMessage']}"
+        }), 404
+    # Step 6: Get all ratings for the seller
+    rating_get_result = invoke_http(
+        f"{RATING_SERVICE_GET_URL}{reporteduserid}",
+        method="GET"
+    )
+    if rating_get_result["Result"]["Success"] != True:
+        return jsonify({
+            "code": 404,
+            "message": f"Rating failed: {rating_get_result['ErrorMessage']}"
+        }), 404
+    # Calculate average rating
+    ratings = rating_get_result["Rating"]
+    total_score = sum(rating["RatingScore"] for rating in ratings)
+    average_rating = total_score / len(ratings) if ratings else 0
+    # Step 7: Update seller rating
+    update_seller_rating_payload = {"rating": average_rating}
+    update_seller_rating_result = invoke_http(
+        f"{USER_SERVICE_URL}/user/{reporteduserid}/rating",
+        method="PUT",
+        json=update_seller_rating_payload
+    )
+    
     # Get buyer phone number (assuming you've added the endpoint in user.py)
     user_phone_result = invoke_http(f"{USER_SERVICE_URL}/user/getPhoneFromUser/{currentuserid}", method="GET")
     user_phone = None
