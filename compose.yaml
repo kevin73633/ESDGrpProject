@@ -302,7 +302,7 @@ services:
     platform: linux/amd64  # <- required for Mac M1 chip. Otherwise, can remove
     restart: always
     networks:
-      - deal-net
+      - esd-net
     environment:
       POSTGRES_DB: kong
       POSTGRES_USER: kong
@@ -323,7 +323,7 @@ services:
     command: "kong migrations bootstrap"
     restart: on-failure
     networks:
-      - deal-net
+      - esd-net
     environment:
       KONG_DATABASE: postgres
       KONG_PG_HOST: kong-database
@@ -337,7 +337,7 @@ services:
     platform: linux/amd64  # <- required for Mac M1 chip. Otherwise, can remove
     restart: always
     networks:
-      - deal-net
+      - esd-net
     environment:
       KONG_DATABASE: postgres
       KONG_PG_HOST: kong-database
