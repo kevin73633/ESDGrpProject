@@ -162,13 +162,13 @@ def get_deal_with_product(productid):
         description: No deal found for the product
         
     """
-    deal = db.session.scalar(db.select(Deal).filter_by(productid=productid))
-    if deal:
+    deals = db.session.scalar(db.select(Deal).filter_by(productid=productid)).all()
+    if deals:
         return jsonify(
             {
                 "code": 200,
                 "data": {
-                    "deal": deal.json()
+                    "deals": [deal.json() for deal in deals]
                 }
             }
         )
@@ -178,13 +178,7 @@ def get_deal_with_product(productid):
             "message": "There is no deal."
         }
     ), 404
-    
-@app.route("/deal/by_product/<string:productid>", methods=['GET'])
-def get_deal_by_product(productid):
-    deals = db.session.scalars(db.select(Deal).filter_by(productid=productid)).all()
-    if deals:
-        return jsonify({"code": 200, "data": {"deals": [deal.json() for deal in deals]}})
-    return jsonify({"code": 404, "message": "Deals not found."}), 404    
+        
     
 @app.route("/deal/<string:dealid>", methods=['GET'])
 def get_single_deal(dealid):

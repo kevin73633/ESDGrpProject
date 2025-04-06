@@ -207,17 +207,16 @@ def report_user():
     payment_result_string = None
     # refund deal if reported
     if (deal_data['status'] == 1 or deal_data['status'] == 3):
-        print("Refund")
-        
+        # Get buyer account number
+        user_account_result = invoke_http(f"{USER_SERVICE_URL}/user/getAccNumFromUser/{deal_data["buyerid"]}", method="GET")
+        if user_account_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer account information not found."}), 404
+        user_account = user_account_result["data"]["AccNum"]
+
         # Step 2: Get product details
         product_result = invoke_http(f"{PRODUCT_SERVICE_URL}/products/{deal_data['productid']}", method="GET")
         if product_result["code"] != 200:return jsonify({"code": 404,"message": f"Product {deal_data['productid']} not found."}), 404
         product_data = product_result["data"]["product"]
 
-        # Get buyer account number
-        user_account_result = invoke_http(f"{USER_SERVICE_URL}/user/getAccNumFromUser/{deal_data["buyerid"]}", method="GET")
-        if user_account_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer account information not found."}), 404
-        user_account = user_account_result["data"]["AccNum"]
         # Step 4: Process payment (escrow)
         payment_payload = {
             "accnum": user_account,
