@@ -1,3 +1,4 @@
+
 # README.md
 
 ## 📦 Deal Sharing Marketplace Platform
@@ -17,11 +18,14 @@ Ensure the following are installed:
 ### 📥 Clone and Setup
 1. Clone the repository:
    ```bash
-   git clone <your-repo-url>
-   cd <your-repo-directory>
+   gh repo clone kevin73633/ESDGrpProject
+   cd ESDGrpProject
    ```
 
 2. Ensure `.env` file is configured with your AWS credentials, OpenAI key, and database login:
+   > 💡 **Mac users**: use `DBLOGIN=root:root`  
+   > 💡 **Windows users**: use `DBLOGIN=root`
+
    ```env
    AWS_ACCESS_KEY_ID=AKIA...
    AWS_SECRET_ACCESS_KEY=UTYN...
@@ -32,26 +36,35 @@ Ensure the following are installed:
    OPENAI_API_KEY=sk-proj-...
    ```
 
-3. Launch backend services with Docker Compose:
+3. Import the database schema into MySQL using:
+   ```bash
+   mysql -u root -p < proj.sql
+   ```
+
+4. 🚫 **Important:** Remove all other Docker containers before running (MAINLY kong and RabbitMQ, WONT WORK OTHERWISE!!!):
    ```bash
    docker compose up -d --build
    ```
 
-4. Launch the frontend:
+5. Launch the frontend:
    ```bash
    cd frontend
    npm install
    npm run serve
    ```
 
-5. Access the platform at:
+6. Access the platform at:
    - [http://localhost:8080/login](http://localhost:8080/login)
 
 ### 🧪 Test Credentials
-- **User 1 (Buyer):**
+- **User 1 (Seller):**
   - Username: `12345678`
-- **User 2 (Seller):**
+- **User 2 (Buyer):**
   - Username: `22345678`
+- **User 3 (Seller):**
+  - Username: `32345678`
+- **User 4 (Buyer):**
+  - Username: `42345678`
 
 ---
 
@@ -84,15 +97,6 @@ You can explore the RESTful API documentation using Swagger UI:
 
 🔗 [View Swagger API Docs](http://localhost:5300/apidocs)
 
----
-
-## 🧠 Contributors (G5T1)
-- **Dessy**: ChatGPT microservice, Swagger, Report & Slides
-- **Kirthi**: Notification microservice, AWS SNS, OTP OutSystems integration (G9T5)
-- **Kevin**: User, Product, Deal, Chat, ALL Composite microservices
-- **Kai Zhe**: Rating microservice, OutSystems integration, Report
-- **Precia**: Frontend development, API integration
-- **Shamel**: Payment, Account, PaymentRecord microservices, Kong and Docker config
 
 ---
 
