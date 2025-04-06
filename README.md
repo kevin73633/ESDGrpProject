@@ -1,3 +1,4 @@
+
 # README.md
 
 ## 📦 Deal Sharing Marketplace Platform
@@ -17,11 +18,14 @@ Ensure the following are installed:
 ### 📥 Clone and Setup
 1. Clone the repository:
    ```bash
-   git clone <your-repo-url>
-   cd <your-repo-directory>
+   gh repo clone kevin73633/ESDGrpProject
+   cd ESDGrpProject
    ```
 
 2. Ensure `.env` file is configured with your AWS credentials, OpenAI key, and database login:
+   > 💡 **Mac users**: use `DBLOGIN=root:root`  
+   > 💡 **Windows users**: use `DBLOGIN=root`
+
    ```env
    AWS_ACCESS_KEY_ID=AKIA...
    AWS_SECRET_ACCESS_KEY=UTYN...
@@ -32,19 +36,24 @@ Ensure the following are installed:
    OPENAI_API_KEY=sk-proj-...
    ```
 
-3. Launch backend services with Docker Compose:
+3. Import the database schema into MySQL using:
+   ```bash
+   mysql -u root -p < proj.sql
+   ```
+
+4. 🚫 **Important:** Stop all other Docker containers before running:
    ```bash
    docker compose up -d --build
    ```
 
-4. Launch the frontend:
+5. Launch the frontend:
    ```bash
    cd frontend
    npm install
    npm run serve
    ```
 
-5. Access the platform at:
+6. Access the platform at:
    - [http://localhost:8080/login](http://localhost:8080/login)
 
 ### 🧪 Test Credentials
