@@ -23,7 +23,7 @@ Ensure the following are installed:
    ```
 
 2. Ensure `.env` file is configured with your AWS credentials, OpenAI key, and database login:
-   .env file is in the zip provided!
+   !!!IMPORTANT!!!    .env file is in the zip provided!
    > 💡 **Mac users**: use `DBLOGIN=root:root`  
    > 💡 **Windows users**: use `DBLOGIN=root`
 
