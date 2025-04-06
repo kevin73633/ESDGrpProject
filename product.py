@@ -21,6 +21,26 @@ CORS(app, resources={
         "supports_credentials": True
     }
 })
+# Add this Swagger configuration BEFORE initializing Swagger
+app.config['SWAGGER'] = {
+    'title': 'Product API',
+    'version': "1.0",
+    'openapi': "3.0.2",
+    'description': 'API for managing product listings',
+    'specs': [
+        {
+            'endpoint': 'ProductAPI',
+            'route': '/ProductAPI.json',
+            'rule_filter': lambda rule: True,
+            'model_filter': lambda tag: True,
+        }
+    ],
+    'specs_route': "/apidocs/"
+}
+# Then initialize Swagger
+swagger = Swagger(app)
+
+
 # Change to MySQL connection with your specific credentials
 app.config["SQLALCHEMY_DATABASE_URI"] = environ.get("dbURL") or "mysql+mysqlconnector://" + str(environ.get("DBLOGIN")) + "@localhost:3306/Project"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
