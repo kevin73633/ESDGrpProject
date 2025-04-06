@@ -217,10 +217,10 @@ import { Modal, Toast } from 'bootstrap';
 import OtherProfile from './OtherProfile.vue';
 
 // Define API URLs
-const PRODUCT_API_URL = 'http://localhost:5005';
-const USER_API_URL = 'http://localhost:5001';
-const DEAL_API_URL = 'http://localhost:5020';
-const CHAT_API_URL = 'http://localhost:5087';
+const PRODUCT_API_URL = 'http://localhost:8000';
+const USER_API_URL = 'http://localhost:8000';
+const DEAL_API_URL = 'http://localhost:8000';
+const CHAT_API_URL = 'http://localhost:8000';
 
 export default {
   name: 'ProductDetails',
