@@ -13,14 +13,14 @@ import random
 app = Flask(__name__)
 # Update the CORS configuration
 CORS(app, 
-     origins=["http://localhost:8080", "http://localhost:8081"],
+     origins=["http://localhost:8080"],
      supports_credentials=True)
 
 # Add this after_request handler for more control
 @app.after_request
 def after_request(response):
     origin = request.headers.get('Origin')
-    if origin and (origin == 'http://localhost:8080' or origin == 'http://localhost:8081'):
+    if origin and (origin == 'http://localhost:8080'):
         # For preflight requests
         response.headers.set('Access-Control-Allow-Origin', origin)
         response.headers.set('Access-Control-Allow-Credentials', 'true')
