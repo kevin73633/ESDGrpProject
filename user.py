@@ -14,7 +14,11 @@ app = Flask(__name__)
 # Update the CORS configuration
 CORS(app, 
      origins=["http://localhost:8080"],
-     supports_credentials=True)
+     supports_credentials=True,
+     expose_headers=["Content-Type", "Authorization"],
+     allow_headers=["Content-Type", "Authorization", "Accept", "Accept-Version", 
+                   "Content-Length", "Content-MD5", "Date", "X-Auth-Token"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 # Add this after_request handler for more control
 @app.after_request
@@ -27,24 +31,6 @@ def after_request(response):
         response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
         response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
     return response
-
-# Add Swagger configuration
-app.config['SWAGGER'] = {
-    'title': 'User API',
-    'version': "1.0",
-    'openapi': "3.0.2",
-    'description': 'API for managing user accounts, authentication, and user information',
-    'specs': [
-        {
-            'endpoint': 'UserAPI',
-            'route': '/UserAPI.json',
-            'rule_filter': lambda rule: True,  # all in
-            'model_filter': lambda tag: True,  # all in
-        }
-    ],
-    'specs_route': "/apidocs/"
-}
-swagger = Swagger(app)
 
 # Add Swagger configuration
 app.config['SWAGGER'] = {
@@ -442,31 +428,6 @@ def check_auth():
             "message": "Not authenticated"
         }), 401
 
-# Logout
-@app.route("/logout", methods=['POST'])
-def logout():
-    try:
-        # Clear the session
-        session.clear()
-        
-        # Return success response
-        return jsonify({
-            "code": 200,
-            "message": "Successfully logged out"
-        }), 200
-        
-    except Exception as e:
-        # Log the error
-        print(f"Error during logout: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        
-        # Return error response
-        return jsonify({
-            "code": 500,
-            "message": f"An error occurred during logout: {str(e)}"
-        }), 500
-
 #===========================================================
 # User Management Routes
 #===========================================================
@@ -650,6 +611,7 @@ def get_single_user_phone(uid):
             "message": "User not found."
         }
     ), 404
+
   
 # logout  
 @app.route("/logout", methods=['POST'])

@@ -159,9 +159,9 @@ import axios from 'axios';
 axios.defaults.withCredentials = true;  // Enable sending cookies
 
 // API base URL - update this to match your Flask backend
-const API_URL = 'http://localhost:8000';
+const API_URL = 'http://localhost:5001';
 // OTP API from OutSystems
-const OTP_API_URL = 'http://localhost:8000/generate-otp';
+const OTP_API_URL = 'http://localhost:5001/generate-otp';
 
 export default {
   name: 'LoginPage',
