@@ -9,6 +9,8 @@ import uuid
 from datetime import datetime
 import amqp_lib
 from dotenv import load_dotenv
+from flasgger import Swagger
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -17,6 +19,25 @@ CORS(app,
      supports_credentials=True,
      methods=["GET", "POST", "OPTIONS"],
      allow_headers=["Content-Type", "Authorization"])
+
+# Add Swagger configuration
+app.config['SWAGGER'] = {
+    'title': 'Deal Confirmation API',
+    'version': "1.0",
+    'openapi': "3.0.2",
+    'description': 'API for handling the deal confirmation workflow across multiple microservices',
+    'specs': [
+        {
+            'endpoint': 'ConfirmDealAPI',
+            'route': '/ConfirmDealAPI.json',
+            'rule_filter': lambda rule: True,  # all in
+            'model_filter': lambda tag: True,  # all in
+        }
+    ],
+    'specs_route': "/apidocs/"
+}
+swagger = Swagger(app)
+
 
 # Define microservice URLs
 DEAL_SERVICE_URL = "http://deal:5020"
@@ -94,8 +115,34 @@ def send_sms(phone_number, message):
 
 @app.route("/confirm_deal/<string:dealid>/<string:currentuserid>", methods=['POST'])
 def confirm_deal(dealid, currentuserid):
+    # """
+    # Confirm a deal by orchestrating the entire deal confirmation flow
+    # """
     """
     Confirm a deal by orchestrating the entire deal confirmation flow
+    ---
+    tags:
+      - Deal Confirmation
+    parameters:
+      - in: path
+        name: dealid
+        required: true
+        schema:
+          type: string
+        description: ID of the deal to confirm
+      - in: path
+        name: currentuserid
+        required: true
+        schema:
+          type: string
+        description: ID of the current user (either buyer or seller)
+    responses:
+      200:
+        description: Deal confirmed successfully
+      404:
+        description: Deal or product not found
+      500:
+        description: Server error or deal status update failed
     """
     # Step 1: Get deal information
     deal_result = invoke_http(f"{DEAL_SERVICE_URL}/deal/{dealid}", method="GET")

@@ -4,5 +4,4 @@ COPY requirements.txt ./
 RUN python -m pip install --no-cache-dir -r requirements.txt
 COPY ./payment.py ./invokes.py ./
 CMD [ "python", "./payment.py" ]
-# Add this line to your Dockerfile
 RUN pip install flasgger
