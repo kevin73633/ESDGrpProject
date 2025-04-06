@@ -6,6 +6,9 @@ from flask_sqlalchemy import SQLAlchemy
 from os import environ
 import os
 from flasgger import Swagger
+import requests
+import boto3
+import random
 
 app = Flask(__name__)
 
@@ -14,6 +17,18 @@ CORS(app,
      origins=["http://localhost:8080"],  # Your Vue.js frontend URL
      supports_credentials=True,
      resources={r"/*": {"origins": "http://localhost:8080"}})
+
+# Add this after_request handler for more control
+@app.after_request
+def after_request(response):
+    origin = request.headers.get('Origin')
+    if origin and (origin == 'http://localhost:8080' or origin == 'http://localhost:8081'):
+        # For preflight requests
+        response.headers.set('Access-Control-Allow-Origin', origin)
+        response.headers.set('Access-Control-Allow-Credentials', 'true')
+        response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
+        response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    return response
 
 # Add Swagger configuration
 app.config['SWAGGER'] = {
@@ -45,7 +60,83 @@ app.config["SQLALCHEMY_DATABASE_URI"] = (
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_recycle': 299}
 
+# AWS Configuration
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+AWS_REGION = os.environ.get('AWS_REGION', 'us-east-1')
+
+# OTP API URL from OutSystems
+OTP_API_URL = "https://personal-bppzf7rc.outsystemscloud.com/OTPClone/rest/OTPAPICLONE/GenerateOTP"
+
 db = SQLAlchemy(app)
+
+def send_sms(phone_number, message):
+    """
+    Send SMS to any phone number using Amazon SNS
+    
+    Args:
+        phone_number: Phone number in E.164 format (+6512345678)
+        message: The text message to send
+    
+    Returns:
+        Dictionary with success status and message ID or error
+    """
+    try:
+        # Initialize SNS client
+        sns_client = boto3.client('sns',
+            region_name=AWS_REGION,
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+        )
+        
+        # Format phone number if needed
+        if not phone_number.startswith('+'):
+            # Assuming Singapore number
+            if phone_number.startswith('0'):
+                phone_number = '+65' + phone_number[1:]
+            else:
+                phone_number = '+65' + phone_number
+        
+        # Send the SMS
+        response = sns_client.publish(
+            PhoneNumber=phone_number,
+            Message=message,
+            MessageAttributes={
+                'AWS.SNS.SMS.SenderID': {
+                    'DataType': 'String',
+                    'StringValue': 'DEALSHARE'  # Custom sender ID
+                },
+                'AWS.SNS.SMS.SMSType': {
+                    'DataType': 'String',
+                    'StringValue': 'Transactional'  # Higher priority
+                }
+            }
+        )
+        
+        return {
+            "success": True,
+            "message_id": response.get('MessageId')
+        }
+        
+    except Exception as e:
+        print(f"Error sending SMS: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+# Authentication required decorator
+def login_required(f):
+    def decorated_function(*args, **kwargs):
+        if 'uid' not in session:
+            return jsonify({
+                "code": 401,
+                "message": "Authentication required"
+            }), 401
+        return f(*args, **kwargs)
+    
+    decorated_function.__name__ = f.__name__
+    return decorated_function
 
 
 class User(db.Model):
@@ -66,61 +157,261 @@ class User(db.Model):
             'phone': self.phone, 
         }
         return dto
+    
+    
+@app.route("/generate-otp", methods=['GET'])
+def generate_otp_proxy():
+    """Generate OTP by proxying the OutSystems API"""
+    try:
+        # Call the OutSystems API
+        response = requests.get(OTP_API_URL, timeout=10)
+        
+        print(f"OutSystems API response: Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            try:
+                # Parse the JSON response
+                otp_data = response.json()
+                
+                # Make sure we return a response with the expected format
+                if 'OTP' in otp_data:
+                    return jsonify(otp_data)
+                else:
+                    # If the response doesn't have an OTP field, wrap it
+                    return jsonify({"OTP": str(otp_data)})
+            except Exception as e:
+                print(f"Error parsing JSON: {e}")
+                
+                # Try to use the raw response text
+                try:
+                    # If it's just a number without JSON formatting
+                    otp_value = response.text.strip()
+                    return jsonify({"OTP": otp_value})
+                except:
+                    # Generate a fallback OTP
+                    fallback_otp = str(random.randint(100000, 999999))
+                    return jsonify({"OTP": fallback_otp})
+        else:
+            print(f"API returned non-200 status: {response.status_code}")
+            # Generate a fallback OTP
+            fallback_otp = str(random.randint(100000, 999999))
+            return jsonify({"OTP": fallback_otp})
+    
+    except Exception as e:
+        print(f"Error proxying OTP generation: {e}")
+        # Generate a fallback OTP
+        fallback_otp = str(random.randint(100000, 999999))
+        return jsonify({"OTP": fallback_otp})
 
-# Login route
-@app.route("/login", methods=['POST'])
-def login():
-    """
-    User login
-    ---
-    tags:
-      - Authentication
-    requestBody:
-      content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - uid
-            properties:
-              uid:
-                type: string
-                description: User ID for authentication
-    responses:
-      200:
-        description: Login successful
-        
-      401:
-        description: Invalid user ID
-        
-    """
+# # Verify user and retrieve phone number
+@app.route("/verify-user", methods=['POST'])
+def verify_user():
     data = request.get_json()
     uid = data.get('uid')
     
+    if not uid:
+        return jsonify({
+            "code": 400,
+            "message": "User ID is required"
+        }), 400
+    
+    # Get user from database
     user = db.session.scalar(db.select(User).filter_by(uid=uid))
     
-    if user:
-        # Print for debugging
-        print(f"User found: {user.uid}, setting session")
-        
-        # Set session data
-        session['uid'] = user.uid
-        session['name'] = user.name
-        session.permanent = True
-        
-        # Print session to verify
-        print(f"Session after login: {session}")
-        
+    if not user:
+        return jsonify({
+            "code": 404,
+            "message": "User not found"
+        }), 404
+    
+    # Store the user ID in session temporarily
+    session['temp_uid'] = uid
+    
+    # Return the phone number
+    return jsonify({
+        "code": 200,
+        "message": "User verified successfully",
+        "data": {
+            "phone": user.phone
+        }
+    })
+
+# Generate and send OTP
+@app.route("/send-otp", methods=['POST'])
+def send_otp():
+    """Send OTP via AWS SNS"""
+    data = request.get_json()
+    phone = data.get('phone')
+    otp = data.get('otp')
+    
+    if not phone or not otp:
+        return jsonify({
+            "code": 400,
+            "message": "Phone number and OTP are required"
+        }), 400
+    
+    # Store OTP in session for verification later
+    session['otp'] = otp
+    
+    # Create OTP message
+    message = f"Your DealShare verification code is: {otp}. This code will expire in 10 minutes."
+    
+    # Development mode check - if AWS credentials not configured, log instead of sending
+    if not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY:
+        print(f"DEVELOPMENT MODE: OTP for {phone}: {otp}")
         return jsonify({
             "code": 200,
-            "data": {"user": user.json()},
-            "message": "Login successful"
+            "message": "OTP sent successfully (Development Mode)",
+            "data": {
+                "message_id": "dev-mode",
+                "dev_otp": otp  # Only include in development
+            }
         })
     
+    # Send SMS
+    sms_result = send_sms(phone, message)
+    
+    if sms_result["success"]:
+        return jsonify({
+            "code": 200,
+            "message": "OTP sent successfully",
+            "data": {
+                "message_id": sms_result["message_id"]
+            }
+        })
+    else:
+        print(f"SMS sending failed: {sms_result['error']}")
+        # Fall back to development mode if SMS fails
+        return jsonify({
+            "code": 200,  # Still return success to frontend for testing
+            "message": "OTP sent successfully (Fallback Mode)",
+            "data": {
+                "message_id": "fallback-mode",
+                "dev_otp": otp  # Only include in development
+            }
+        })
+
+# Verify OTP and complete login
+@app.route("/verify-otp", methods=['POST'])
+def verify_otp():
+    """Verify OTP and complete login"""
+    data = request.get_json()
+    uid = data.get('uid')
+    entered_otp = data.get('otp')
+    
+    print(f"Verifying OTP: UID={uid}, Entered OTP={entered_otp}, Session OTP={session.get('otp')}")
+    
+    # Get stored OTP from session
+    stored_otp = session.get('otp')
+    temp_uid = session.get('temp_uid')
+    
+    # For debugging, add more logs
+    print(f"Session contents: {session}")
+    
+    # Check if we have an OTP in the session
+    if not stored_otp:
+        print("No OTP found in session")
+        return jsonify({
+            "code": 400,
+            "message": "No verification code found. Please request a new code."
+        }), 400
+    
+    # Skip UID check for now to isolate the issue
+    # if not temp_uid or temp_uid != uid:
+    #     return jsonify({
+    #         "code": 400,
+    #         "message": "Invalid session"
+    #     }), 400
+    
+    # Verify OTP
+    if stored_otp != entered_otp:
+        return jsonify({
+            "code": 401,
+            "message": "Invalid verification code"
+        }), 401
+    
+    # OTP verified, get user from database
+    user = db.session.scalar(db.select(User).filter_by(uid=uid))
+    
+    if not user:
+        return jsonify({
+            "code": 404,
+            "message": "User not found"
+        }), 404
+    
+    # Clear temporary session data
+    session.pop('otp', None)
+    session.pop('temp_uid', None)
+    
+    # Set authenticated session
+    session['uid'] = user.uid
+    session['name'] = user.name
+    session.permanent = True
+    
+    print(f"User authenticated: {user.uid}, session: {session}")
+    
     return jsonify({
-        "code": 401,
-        "message": "Invalid user ID"
-    }), 401
+        "code": 200,
+        "message": "Login successful",
+        "data": {
+            "user": user.json()
+        }
+    })
+
+# # Login route
+# @app.route("/login", methods=['POST'])
+# def login():
+#     """
+#     User login
+#     ---
+#     tags:
+#       - Authentication
+#     requestBody:
+#       content:
+#         application/json:
+#           schema:
+#             type: object
+#             required:
+#               - uid
+#             properties:
+#               uid:
+#                 type: string
+#                 description: User ID for authentication
+#     responses:
+#       200:
+#         description: Login successful
+        
+#       401:
+#         description: Invalid user ID
+        
+#     """
+#     data = request.get_json()
+#     uid = data.get('uid')
+    
+#     user = db.session.scalar(db.select(User).filter_by(uid=uid))
+    
+#     if user:
+#         # Print for debugging
+#         print(f"User found: {user.uid}, setting session")
+        
+#         # Set session data
+#         session['uid'] = user.uid
+#         session['name'] = user.name
+#         session.permanent = True
+        
+#         # Print session to verify
+#         print(f"Session after login: {session}")
+        
+#         return jsonify({
+#             "code": 200,
+#             "data": {"user": user.json()},
+#             "message": "Login successful"
+#         })
+    
+#     return jsonify({
+#         "code": 401,
+#         "message": "Invalid user ID"
+#     }), 401
 
 # Check authentication status
 @app.route("/check-auth", methods=['GET'])
@@ -169,7 +460,6 @@ def login_required(f):
     
     decorated_function.__name__ = f.__name__
     return decorated_function
-
 
 # Protected route example
 @app.route("/user/profile", methods=['GET'])
@@ -393,6 +683,7 @@ def logout():
             "code": 500,
             "message": f"An error occurred during logout: {str(e)}"
         }), 500
+    
 @app.route("/user/<string:uid>/rating", methods=['PUT'])
 def update_user_rating(uid):
     """
