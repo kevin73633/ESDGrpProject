@@ -18,19 +18,19 @@ services:
   # New services from the data
   - id: 7b86eb20-72cf-4002-acba-2d598cab0adc
     name: user-service
-    url: http://user:5000  # Assuming port based on convention
+    url: http://user:5001  
     
   - id: 80067d7f-ccdd-4390-b19a-a7f5e7dc550b
     name: chat-service
-    url: http://chat:5400  # Assuming port based on convention
+    url: http://chat:5087  
     
   - id: 2ca26b1f-14ae-4698-be0e-91f6f3e6dbe6
     name: products-service
-    url: http://products:5500  # Assuming port based on convention
+    url: http://product:5005  
     
   - id: ea9cd0ad-114a-4489-89fb-80686e043ec5
     name: deal-service
-    url: http://deal:5600  # Assuming port based on convention
+    url: http://deal:5020  
 
 routes:
   # Existing routes to keep
