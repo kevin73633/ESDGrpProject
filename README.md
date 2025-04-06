@@ -1,36 +1,88 @@
-<h1 align="center" id="title">STEPS</h1>
 
-<p id="description">SCIS TIMETABLE AND ENROLLMENT PLANNING SYSTEM<br>A quick and efficient way to plan your SCIS modules here at SMU</p>
+# README.md
 
-<h2>🚀 Demo</h2>
+## 📦 Deal Sharing Marketplace Platform
+A peer-to-peer product deal sharing platform supporting secure escrow payments, dispute resolution, real-time messaging, and intelligent chat moderation.
 
-[https://web-app2-group9.vercel.app/](https://web-app2-group9.vercel.app/)
+---
 
-  
-  
-<h2>🧐 Features</h2>
+## 🚀 Installation & Setup
 
-Here're some of the project's best features:
+### 📁 Prerequisites
+Ensure the following are installed:
+- [Docker](https://www.docker.com/)
+- [Docker Compose](https://docs.docker.com/compose/)
+- Optional (for development): Python 3.9+, Node.js (if editing frontend)
 
-*   Interactive module planning system
-*   Course Catalog with efficient database backend
-*   GPA Tracking System
-*   Easy Login with Google
+### 📥 Clone and Setup
+1. Clone the repository:
+   ```bash
+   git clone <your-repo-url>
+   cd <your-repo-directory>
+   ```
 
-<h2>🛠️ Installation Steps:</h2>
+2. Ensure `.env` file is configured with your AWS credentials and other environment variables:
+   ```env
+   AWS_ACCESS_KEY_ID=your_access_key
+   AWS_SECRET_ACCESS_KEY=your_secret_key
+   AWS_REGION=ap-southeast-1
+   RABBITMQ_HOST=rabbitmq
+   RABBITMQ_EXCHANGE=deal_events
+   ```
 
-<p>1. Sign in with Google</p>
+3. Launch with Docker Compose:
+   ```bash
+   docker compose up -d --build
+   ```
 
-<p>2. Done! you can now add remove or plan out your modules with your timetable!</p>
+4. Access the frontend via:
+   - [http://localhost:8080/login](http://localhost:8080/login)
 
-  
-  
-<h2>💻 Built with</h2>
+### 🧪 Test Credentials
+- **User 1 (Buyer):**
+  - Username: `12345678`
+- **User 2 (Seller):**
+  - Username: `22345678`
 
-Technologies used in the project:
+---
 
-*   Firebase Auth
-*   Firebase Realtime DB
-*   VUE
-*   Bootstrap
-*   JQuery
+## 🧠 Technologies Used
+
+| Category | Tech Stack |
+|----------|------------|
+| Frontend | Vue.js 3, Bootstrap |
+| Backend | Python (Flask), MySQL |
+| Microservices | Docker, Flask REST APIs |
+| Messaging | RabbitMQ (AMQP), AWS SNS |
+| Rating Engine | OutSystems REST API Integration |
+| Moderation | OpenAI ChatGPT API (chat analysis) |
+| Gateway | Kong API Gateway |
+| Docs | Swagger (OpenAPI Spec) |
+
+---
+
+## 📚 Key Features
+- 🔐 Escrow payment system (Confirm Deal)
+- ✅ Post-exchange fund release and rating (Verify Receipt)
+- 🚩 Intelligent chat moderation with reporting (Report Chat)
+- 💬 Real-time AMQP messaging + SMS alerts
+- 🧾 RESTful microservices (Chat, Product, Deal, Rating, etc.)
+
+---
+
+## 🧠 Contributors (G5T1)
+- Dessy (ChatGPT microservice, Swagger, Docs)
+- Kirthi (Notification service)
+- Kevin (User, Product, Deal, Chat microservices)
+- Kai Zhe (Rating microservice, OutSystems, Docs)
+- Precia (Frontend, API integration)
+- Shamel (Payment, Account, PaymentRecord, Kong)
+
+---
+
+## 📄 Additional Notes
+- ChatGPT moderation API: [OpenAI Docs](https://platform.openai.com/docs/api-reference)
+- SMS Notifications: [AWS SNS Docs](https://docs.aws.amazon.com/sns/index.html)
+- OutSystems Rating API used for user credibility calculation.
+
+For more details, refer to the included `G5T1 Report.docx` and presentation slides.

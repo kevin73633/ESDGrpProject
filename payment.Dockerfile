@@ -4,3 +4,4 @@ COPY requirements.txt ./
 RUN python -m pip install --no-cache-dir -r requirements.txt
 COPY ./payment.py ./invokes.py ./
 CMD [ "python", "./payment.py" ]
+RUN pip install flasgger

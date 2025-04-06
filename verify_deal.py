@@ -9,6 +9,8 @@ import uuid
 from datetime import datetime
 import amqp_lib
 from dotenv import load_dotenv
+from flasgger import Swagger
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -17,6 +19,24 @@ CORS(app,
      supports_credentials=True,
      methods=["GET", "POST", "OPTIONS"],
      allow_headers=["Content-Type", "Authorization"])
+
+# Add Swagger configuration
+app.config['SWAGGER'] = {
+    'title': 'Deal Verification API',
+    'version': "1.0",
+    'openapi': "3.0.2",
+    'description': 'API for verifying deals, processing payments, and updating ratings',
+    'specs': [
+        {
+            'endpoint': 'VerifyDealAPI',
+            'route': '/VerifyDealAPI.json',
+            'rule_filter': lambda rule: True,  # all in
+            'model_filter': lambda tag: True,  # all in
+        }
+    ],
+    'specs_route': "/apidocs/"
+}
+swagger = Swagger(app)
 
 # Define microservice URLs
 DEAL_SERVICE_URL = "http://deal:5020"
@@ -43,59 +63,96 @@ def send_sms(phone_number, message):
     """
     Send SMS to any phone number using Amazon SNS
     
-#     Args:
-#         phone_number: Phone number in E.164 format (+6512345678)
-#         message: The text message to send
+    Args:
+        phone_number: Phone number in E.164 format (+6512345678)
+        message: The text message to send
     
-#     Returns:
-#         Dictionary with success status and message ID or error
-#     """
-#     try:
-#         # Initialize SNS client
-#         sns_client = boto3.client('sns',
-#             region_name=AWS_REGION,
-#             aws_access_key_id=AWS_ACCESS_KEY_ID,
-#             aws_secret_access_key=AWS_SECRET_ACCESS_KEY
-#         )
+    Returns:
+        Dictionary with success status and message ID or error
+    """
+    try:
+        # Initialize SNS client
+        sns_client = boto3.client('sns',
+            region_name=AWS_REGION,
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+        )
         
-#         # Format phone number if needed
-#         if not phone_number.startswith('+'):
-#             # Assuming Singapore number
-#             if phone_number.startswith('0'):
-#                 phone_number = '+65' + phone_number[1:]
-#             else:
-#                 phone_number = '+65' + phone_number
+        # Format phone number if needed
+        if not phone_number.startswith('+'):
+            # Assuming Singapore number
+            if phone_number.startswith('0'):
+                phone_number = '+65' + phone_number[1:]
+            else:
+                phone_number = '+65' + phone_number
         
-#         # Send the SMS
-#         response = sns_client.publish(
-#             PhoneNumber=phone_number,
-#             Message=message,
-#             MessageAttributes={
-#                 'AWS.SNS.SMS.SenderID': {
-#                     'DataType': 'String',
-#                     'StringValue': 'DEALSVC'  # Custom sender ID
-#                 },
-#                 'AWS.SNS.SMS.SMSType': {
-#                     'DataType': 'String',
-#                     'StringValue': 'Transactional'  # Higher priority
-#                 }
-#             }
-#         )
+        # Send the SMS
+        response = sns_client.publish(
+            PhoneNumber=phone_number,
+            Message=message,
+            MessageAttributes={
+                'AWS.SNS.SMS.SenderID': {
+                    'DataType': 'String',
+                    'StringValue': 'DEALSVC'  # Custom sender ID
+                },
+                'AWS.SNS.SMS.SMSType': {
+                    'DataType': 'String',
+                    'StringValue': 'Transactional'  # Higher priority
+                }
+            }
+        )
         
-#         return {
-#             "success": True,
-#             "message_id": response.get('MessageId')
-#         }
+        return {
+            "success": True,
+            "message_id": response.get('MessageId')
+        }
         
-#     except Exception as e:
-#         print(f"Error sending SMS: {str(e)}")
-#         return {
-#             "success": False,
-#             "error": str(e)
-#         }
+    except Exception as e:
+        print(f"Error sending SMS: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 @app.route("/verify_deal/<string:dealid>", methods=['POST'])
 def verify_deal(dealid):
+    """
+    Verify a deal by processing payment, updating ratings, and changing deal status
+    ---
+    tags:
+      - Deal Verification
+    parameters:
+      - in: path
+        name: dealid
+        required: true
+        schema:
+          type: string
+        description: ID of the deal to verify
+    requestBody:
+      description: Rating information
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - rating
+            properties:
+              rating:
+                type: integer
+                description: Rating score given by the buyer to the seller
+                minimum: 1
+                maximum: 5
+            example:
+              rating: 5
+    responses:
+      200:
+        description: Deal verified successfully
+      404:
+        description: Deal, product, or user not found
+      500:
+        description: Server error, payment failure, or deal status update failed
+    """
     rating = request.json['rating']
     # Step 1: Get deal information
     deal_result = invoke_http(f"{DEAL_SERVICE_URL}/deal/{dealid}", method="GET")
@@ -112,25 +169,25 @@ def verify_deal(dealid):
     if user_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer {deal_data["sellerid"]} not found."}), 404
     user_data = user_result["data"]["user"]
 
-    # Get seller account number
+    # Step 4: Get seller account number
     user_account_result = invoke_http(f"{USER_SERVICE_URL}/user/getAccNumFromUser/{deal_data["sellerid"]}", method="GET")
     if user_account_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer account information not found."}), 404
     user_account = user_account_result["data"]["AccNum"]
 
-    # Get seller phone number
+    # Step 5: Get seller phone number
     user_phone_result = invoke_http(f"{USER_SERVICE_URL}/user/getPhoneFromUser/{deal_data["sellerid"]}", method="GET")
     user_phone = None
     if user_phone_result["code"] == 200:
         user_phone = user_phone_result["data"]["phone"]
 
-    # Step 4: Process payment (escrow)
+    # Step 6: Process payment (release)
     payment_payload = {
         "accnum": user_account,
         "amount": product_data["price"]
     }
     
     payment_result = invoke_http(
-        f"{PAYMENT_SERVICE_URL}/payment/escrow",
+        f"{PAYMENT_SERVICE_URL}/payment/release",
         method="POST",
         json=payment_payload
     )
@@ -141,7 +198,7 @@ def verify_deal(dealid):
         }), payment_result["code"]
     
     payment_result_string = payment_result["transaction"]
-    # Step 5: Post rating to the rating service
+    # Step 7: Post rating to the rating service
     rating_post_payload = {
         "CreatedAt": datetime.now().isoformat(),
         "RaterID": deal_data["buyerid"],
@@ -160,7 +217,7 @@ def verify_deal(dealid):
             "code": 404,
             "message": f"Rating failed: {rating_post_result['ErrorMessage']}"
         }), 404
-    # Step 6: Get all ratings for the seller
+    # Step 8: Get all ratings for the seller
     rating_get_result = invoke_http(
         f"{RATING_SERVICE_GET_URL}{deal_data["sellerid"]}",
         method="GET"
@@ -170,35 +227,7 @@ def verify_deal(dealid):
             "code": 404,
             "message": f"Rating failed: {rating_get_result['ErrorMessage']}"
         }), 404
-    # Calculate average rating
-    ratings = rating_get_result["Rating"]
-    total_score = sum(rating["RatingScore"] for rating in ratings)
-    average_rating = total_score / len(ratings) if ratings else 0
-    # Step 7: Update seller rating
-    update_seller_rating_payload = {"rating": average_rating}
-    update_seller_rating_result = invoke_http(
-        f"{USER_SERVICE_URL}/user/{deal_data["sellerid"]}/rating",
-        method="PUT",
-        json=update_seller_rating_payload
-    )
-    # Step 8: Update deal status to verified
-    update_deal_payload = {}
-    if (deal_data['status'] == 3):
-        update_deal_payload = {"status": 4}
-    update_deal_result = invoke_http(
-        f"{DEAL_SERVICE_URL}/deal/{dealid}/status",
-        method="PUT",
-        json=update_deal_payload
-    )
-
-
-    if update_deal_result["code"] != 200:
-        # Payment was successful but deal status update failed
-        # We should implement compensating transaction here (refund)
-        return jsonify({
-            "code": 500,
-            "message": f"Deal status update failed: {update_deal_result['message']}"
-        }), 500
+   
     # Step 9: Create notification payload with all relevant information
     notification_payload = {
         "event_type": "deal_verified",
@@ -219,7 +248,7 @@ def verify_deal(dealid):
         "payment": {
             "transaction_id": payment_result.get("transaction", {}).get("transaction_id", ""),
             "amount": product_data["price"],
-            "status": "escrow"
+            "status": "release"
         }
     }
     
@@ -236,7 +265,37 @@ def verify_deal(dealid):
     if user_phone:
         buyer_message = f"Your purchase/sale of {product_data['title']} for ${product_data['price']} has been verified. Deal ID: {dealid}"
         sms_results["buyer_sms"] = send_sms(user_phone, buyer_message)
-    
+
+
+    # Calculate average rating
+    ratings = rating_get_result["Rating"]
+    total_score = sum(rating["RatingScore"] for rating in ratings)
+    average_rating = total_score / len(ratings) if ratings else 0
+    # Step 12: Update seller rating
+    update_seller_rating_payload = {"rating": average_rating}
+    update_seller_rating_result = invoke_http(
+        f"{USER_SERVICE_URL}/user/{deal_data["sellerid"]}/rating",
+        method="PUT",
+        json=update_seller_rating_payload
+    )
+    # Step 13: Update deal status to verified
+    update_deal_payload = {}
+    if (deal_data['status'] == 3):
+        update_deal_payload = {"status": 4}
+    update_deal_result = invoke_http(
+        f"{DEAL_SERVICE_URL}/deal/{dealid}/status",
+        method="PUT",
+        json=update_deal_payload
+    )
+
+
+    if update_deal_result["code"] != 200:
+        # Payment was successful but deal status update failed
+        # We should implement compensating transaction here (refund)
+        return jsonify({
+            "code": 500,
+            "message": f"Deal status update failed: {update_deal_result['message']}"
+        }), 500
     # Return success response with combined data
     return jsonify({
         "code": 200,

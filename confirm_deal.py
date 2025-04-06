@@ -9,6 +9,8 @@ import uuid
 from datetime import datetime
 import amqp_lib
 from dotenv import load_dotenv
+from flasgger import Swagger
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -17,6 +19,25 @@ CORS(app,
      supports_credentials=True,
      methods=["GET", "POST", "OPTIONS"],
      allow_headers=["Content-Type", "Authorization"])
+
+# Add Swagger configuration
+app.config['SWAGGER'] = {
+    'title': 'Deal Confirmation API',
+    'version': "1.0",
+    'openapi': "3.0.2",
+    'description': 'API for handling the deal confirmation workflow across multiple microservices',
+    'specs': [
+        {
+            'endpoint': 'ConfirmDealAPI',
+            'route': '/ConfirmDealAPI.json',
+            'rule_filter': lambda rule: True,  # all in
+            'model_filter': lambda tag: True,  # all in
+        }
+    ],
+    'specs_route': "/apidocs/"
+}
+swagger = Swagger(app)
+
 
 # Define microservice URLs
 DEAL_SERVICE_URL = "http://deal:5020"
@@ -41,61 +62,87 @@ def send_sms(phone_number, message):
     """
     Send SMS to any phone number using Amazon SNS
     
-#     Args:
-#         phone_number: Phone number in E.164 format (+6512345678)
-#         message: The text message to send
+    Args:
+        phone_number: Phone number in E.164 format (+6512345678)
+        message: The text message to send
     
-#     Returns:
-#         Dictionary with success status and message ID or error
-#     """
-#     try:
-#         # Initialize SNS client
-#         sns_client = boto3.client('sns',
-#             region_name=AWS_REGION,
-#             aws_access_key_id=AWS_ACCESS_KEY_ID,
-#             aws_secret_access_key=AWS_SECRET_ACCESS_KEY
-#         )
+    Returns:
+        Dictionary with success status and message ID or error
+    """
+    try:
+        # Initialize SNS client
+        sns_client = boto3.client('sns',
+            region_name=AWS_REGION,
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+        )
         
-#         # Format phone number if needed
-#         if not phone_number.startswith('+'):
-#             # Assuming Singapore number
-#             if phone_number.startswith('0'):
-#                 phone_number = '+65' + phone_number[1:]
-#             else:
-#                 phone_number = '+65' + phone_number
+        # Format phone number if needed
+        if not phone_number.startswith('+'):
+            # Assuming Singapore number
+            if phone_number.startswith('0'):
+                phone_number = '+65' + phone_number[1:]
+            else:
+                phone_number = '+65' + phone_number
         
-#         # Send the SMS
-#         response = sns_client.publish(
-#             PhoneNumber=phone_number,
-#             Message=message,
-#             MessageAttributes={
-#                 'AWS.SNS.SMS.SenderID': {
-#                     'DataType': 'String',
-#                     'StringValue': 'DEALSVC'  # Custom sender ID
-#                 },
-#                 'AWS.SNS.SMS.SMSType': {
-#                     'DataType': 'String',
-#                     'StringValue': 'Transactional'  # Higher priority
-#                 }
-#             }
-#         )
+        # Send the SMS
+        response = sns_client.publish(
+            PhoneNumber=phone_number,
+            Message=message,
+            MessageAttributes={
+                'AWS.SNS.SMS.SenderID': {
+                    'DataType': 'String',
+                    'StringValue': 'DEALSVC'  # Custom sender ID
+                },
+                'AWS.SNS.SMS.SMSType': {
+                    'DataType': 'String',
+                    'StringValue': 'Transactional'  # Higher priority
+                }
+            }
+        )
         
-#         return {
-#             "success": True,
-#             "message_id": response.get('MessageId')
-#         }
+        return {
+            "success": True,
+            "message_id": response.get('MessageId')
+        }
         
-#     except Exception as e:
-#         print(f"Error sending SMS: {str(e)}")
-#         return {
-#             "success": False,
-#             "error": str(e)
-#         }
+    except Exception as e:
+        print(f"Error sending SMS: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 @app.route("/confirm_deal/<string:dealid>/<string:currentuserid>", methods=['POST'])
 def confirm_deal(dealid, currentuserid):
+    # """
+    # Confirm a deal by orchestrating the entire deal confirmation flow
+    # """
     """
     Confirm a deal by orchestrating the entire deal confirmation flow
+    ---
+    tags:
+      - Deal Confirmation
+    parameters:
+      - in: path
+        name: dealid
+        required: true
+        schema:
+          type: string
+        description: ID of the deal to confirm
+      - in: path
+        name: currentuserid
+        required: true
+        schema:
+          type: string
+        description: ID of the current user (either buyer or seller)
+    responses:
+      200:
+        description: Deal confirmed successfully
+      404:
+        description: Deal or product not found
+      500:
+        description: Server error or deal status update failed
     """
     # Step 1: Get deal information
     deal_result = invoke_http(f"{DEAL_SERVICE_URL}/deal/{dealid}", method="GET")
@@ -106,32 +153,21 @@ def confirm_deal(dealid, currentuserid):
     product_result = invoke_http(f"{PRODUCT_SERVICE_URL}/products/{deal_data['productid']}", method="GET")
     if product_result["code"] != 200:return jsonify({"code": 404,"message": f"Product {deal_data['productid']} not found."}), 404
     product_data = product_result["data"]["product"]
-    
-    userToFetch = ""
-    if (deal_data['buyerid'] == currentuserid):
-        userToFetch = "buyerid"
-    elif (deal_data['sellerid'] == currentuserid):
-        userToFetch = "sellerid"
-    # Step 3: Get buyer information
-    user_result = invoke_http(f"{USER_SERVICE_URL}/user/{deal_data[userToFetch]}", method="GET")
-    if user_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer {deal_data[userToFetch]} not found."}), 404
-    user_data = user_result["data"]["user"]
-
-    # Get buyer account number
-    user_account_result = invoke_http(f"{USER_SERVICE_URL}/user/getAccNumFromUser/{deal_data[userToFetch]}", method="GET")
-    if user_account_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer account information not found."}), 404
-    user_account = user_account_result["data"]["AccNum"]
 
     # Get buyer phone number (assuming you've added the endpoint in user.py)
-    user_phone_result = invoke_http(f"{USER_SERVICE_URL}/user/getPhoneFromUser/{deal_data[userToFetch]}", method="GET")
+    user_phone_result = invoke_http(f"{USER_SERVICE_URL}/user/getPhoneFromUser/{currentuserid}", method="GET")
     user_phone = None
     if user_phone_result["code"] == 200:
         user_phone = user_phone_result["data"]["phone"]
 
 
-    update_deal_result = None
+    update_deal_payload = {}
     payment_result_string = None
     if (deal_data['buyerid'] == currentuserid):
+        # Get buyer account number
+        user_account_result = invoke_http(f"{USER_SERVICE_URL}/user/getAccNumFromUser/{currentuserid}", method="GET")
+        if user_account_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer account information not found."}), 404
+        user_account = user_account_result["data"]["AccNum"]
         # Step 4: Process payment (escrow)
         payment_payload = {
             "accnum": user_account,
@@ -149,16 +185,11 @@ def confirm_deal(dealid, currentuserid):
                 "message": f"Payment failed: {payment_result['message']}"
             }), payment_result["code"]
         # Step 5: Update deal status to confirmed
-        update_deal_payload = {}
+        
         if (deal_data['status'] == 2):
             update_deal_payload = {"status": 3}
         else:
             update_deal_payload = {"status": 1}
-        update_deal_result = invoke_http(
-            f"{DEAL_SERVICE_URL}/deal/{dealid}/status",
-            method="PUT",
-            json=update_deal_payload
-        )
         payment_result_string = payment_result["transaction"]
     elif (deal_data['sellerid'] == currentuserid):
         update_deal_payload = {}
@@ -166,14 +197,12 @@ def confirm_deal(dealid, currentuserid):
             update_deal_payload = {"status": 3}
         else:
             update_deal_payload = {"status": 2}
-    
-        update_deal_result = invoke_http(
+        payment_result_string = "None"
+    update_deal_result = invoke_http(
             f"{DEAL_SERVICE_URL}/deal/{dealid}/status",
             method="PUT",
             json=update_deal_payload
         )
-        payment_result_string = "None"
-    
     if update_deal_result["code"] != 200:
         # Payment was successful but deal status update failed
         # We should implement compensating transaction here (refund)
@@ -194,8 +223,6 @@ def confirm_deal(dealid, currentuserid):
                 "price": product_data["price"]
             },
             "buyer": {
-                "id": user_data["uid"],
-                "name": user_data["name"],
                 "phone": user_phone
             },
             "payment": {
@@ -216,8 +243,6 @@ def confirm_deal(dealid, currentuserid):
                 "price": product_data["price"]
             },
             "seller": {
-                "id": user_data["uid"],
-                "name": user_data["name"],
                 "phone": user_phone
             }
         }

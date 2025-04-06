@@ -58,8 +58,8 @@
   </template>
   
   <script>
-    const DEAL_API_URL = 'http://localhost:8000'; 
-    const CONFIRM_DEAL_API_URL = 'http://localhost:8000/confirm_deal'; 
+    const DEAL_API_URL = 'http://localhost:5020'; 
+    const CONFIRM_DEAL_API_URL = 'http://localhost:5100/confirm_deal'; 
     import axios from 'axios';
     export default {
         name: 'ConfirmDealButton',

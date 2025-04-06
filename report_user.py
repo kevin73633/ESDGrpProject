@@ -9,6 +9,8 @@ import uuid
 from datetime import datetime
 import amqp_lib
 from dotenv import load_dotenv
+from flasgger import Swagger
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -17,6 +19,24 @@ CORS(app,
      supports_credentials=True,
      methods=["GET", "POST", "OPTIONS"],
      allow_headers=["Content-Type", "Authorization"])
+
+# Add Swagger configuration
+app.config['SWAGGER'] = {
+    'title': 'User Report API',
+    'version': "1.0",
+    'openapi': "3.0.2",
+    'description': 'API for handling user reporting workflow across multiple microservices',
+    'specs': [
+        {
+            'endpoint': 'ReportUserAPI',
+            'route': '/ReportUserAPI.json',
+            'rule_filter': lambda rule: True,  # all in
+            'model_filter': lambda tag: True,  # all in
+        }
+    ],
+    'specs_route': "/apidocs/"
+}
+swagger = Swagger(app)
 
 # Define microservice URLs
 DEAL_SERVICE_URL = "http://deal:5020"
@@ -99,8 +119,53 @@ def send_sms(phone_number, message):
 
 @app.route("/report_user", methods=['POST'])
 def report_user():
+    # """
+    # Report a user by orchestrating the entire user report flow
+    # """
     """
-    Report a user by orchestrating the entire user report flow
+    Report a user for inappropriate behavior
+    ---
+    tags:
+      - User Reporting
+    summary: Submit a user report and perform necessary actions
+    description: Process a user report, analyze chat for harmful content, update ratings if needed, and handle refunds if required
+    requestBody:
+      description: User report details
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - dealId
+              - Reason
+              - UserID
+              - ReportedUserID
+            properties:
+              dealId:
+                type: string
+                description: ID of the deal associated with the report
+              Reason:
+                type: string
+                description: Reason for reporting the user
+              UserID:
+                type: string
+                description: ID of the user submitting the report
+              ReportedUserID:
+                type: string
+                description: ID of the user being reported
+            example:
+              dealId: "12345"
+              Reason: "Inappropriate behavior in chat"
+              UserID: "user123"
+              ReportedUserID: "user456"
+    responses:
+      200:
+        description: User report processed successfully
+      404:
+        description: Deal, chat, or user not found
+      500:
+        description: Server error or processing failure
     """
     # Step 1: Get deal information
     

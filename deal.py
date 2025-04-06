@@ -12,6 +12,7 @@ from os import environ
 import os
 
 from sqlalchemy import or_
+from flasgger import Swagger
 
 app = Flask(__name__)
 
@@ -20,6 +21,23 @@ CORS(app,
      supports_credentials=True,
      methods=["GET", "POST", "OPTIONS"],
      allow_headers=["Content-Type", "Authorization"])
+
+app.config['SWAGGER'] = {
+    'title': 'Deal API',
+    'version': "1.0",
+    'openapi': "3.0.2",
+    'description': 'API for managing deals between buyers and sellers',
+    'specs': [
+        {
+            'endpoint': 'DealAPI',
+            'route': '/DealAPI.json',
+            'rule_filter': lambda rule: True,  # all in
+            'model_filter': lambda tag: True,  # all in
+        }
+    ],
+    'specs_route': "/apidocs/"
+}
+swagger = Swagger(app)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = (
      environ.get("dbURL") or "mysql+mysqlconnector://" + str(environ.get("DBLOGIN")) + "@localhost:3306/Project"
@@ -52,6 +70,19 @@ class Deal(db.Model):
 
 @app.route("/deal", methods=['GET'])
 def get_all():
+    """
+    Get all deals
+    ---
+    tags:
+      - Deals
+    responses:
+      200:
+        description: Returns all deals
+    
+      404:
+        description: No deals found
+        
+    """
     deallist = db.session.scalars(db.select(Deal)).all()
     print(deallist)
     if len(deallist):
@@ -71,6 +102,27 @@ def get_all():
     ), 404
 @app.route("/get_deals_with_user/<string:userid>", methods=['GET'])
 def get_deals_with_user(userid):
+    """
+    Get all deals for a specific user
+    ---
+    tags:
+      - Deals
+    parameters:
+      - in: path
+        name: userid
+        required: true
+        schema:
+          type: string
+        description: ID of the user (as buyer or seller)
+    responses:
+      200:
+        description: Returns all deals involving the specified user
+        
+      404:
+        description: No deals found for the user
+        
+    """
+    
     deallist = db.session.scalars(db.select(Deal).filter(or_(Deal.sellerid==userid, Deal.buyerid==userid))).all()
     print(deallist)
     if len(deallist):
@@ -90,6 +142,26 @@ def get_deals_with_user(userid):
     ), 404
 @app.route("/get_deal_with_product/<string:productid>", methods=['GET'])
 def get_deal_with_product(productid):
+    """
+    Get deal for a specific product
+    ---
+    tags:
+      - Deals
+    parameters:
+      - in: path
+        name: productid
+        required: true
+        schema:
+          type: string
+        description: ID of the product
+    responses:
+      200:
+        description: Returns the deal associated with the specified product
+        
+      404:
+        description: No deal found for the product
+        
+    """
     deal = db.session.scalar(db.select(Deal).filter_by(productid=productid))
     if deal:
         return jsonify(
@@ -108,6 +180,26 @@ def get_deal_with_product(productid):
     ), 404
 @app.route("/deal/<string:dealid>", methods=['GET'])
 def get_single_deal(dealid):
+    """
+    Get a specific deal by ID
+    ---
+    tags:
+      - Deals
+    parameters:
+      - in: path
+        name: dealid
+        required: true
+        schema:
+          type: string
+        description: ID of the deal to retrieve
+    responses:
+      200:
+        description: Returns the specified deal
+        
+      404:
+        description: Deal not found
+        
+    """
     deal = db.session.scalar(db.select(Deal).filter_by(dealid=dealid))
     if deal:
         return jsonify(
@@ -135,6 +227,50 @@ def get_single_deal(dealid):
 # 4 = verified both sides, closed
 @app.route("/deal/<string:dealid>/status", methods=['PUT'])
 def update_deal_status(dealid):
+    """
+    Update deal status
+    ---
+    tags:
+      - Deals
+    parameters:
+      - in: path
+        name: dealid
+        required: true
+        schema:
+          type: string
+        description: ID of the deal to update
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                type: integer
+                description: |
+                  New status for the deal:
+                  -1 = reported deal, closed
+                  0 = unconfirmed both sides
+                  1 = confirmed and paid buyer side
+                  2 = confirmed seller side
+                  3 = confirmed both sides
+                  4 = verified both sides, closed
+    responses:
+      200:
+        description: Deal status updated successfully
+        
+      400:
+        description: Bad request - missing status
+        
+      404:
+        description: Deal not found
+        
+      500:
+        description: Server error
+        
+    """
     deal = db.session.scalar(db.select(Deal).filter_by(dealid=dealid))
     
     if not deal:
