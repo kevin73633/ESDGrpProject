@@ -9,6 +9,7 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from os import environ
 import os
+from flasgger import Swagger
 
 app = Flask(__name__)
 
@@ -17,6 +18,24 @@ CORS(app,
      supports_credentials=True,
      methods=["GET", "POST", "OPTIONS"],
      allow_headers=["Content-Type", "Authorization"])
+
+# Add Swagger configuration
+app.config['SWAGGER'] = {
+    'title': 'Payment Record API',
+    'version': "1.0",
+    'openapi': "3.0.2",
+    'description': 'API for managing payment transaction records',
+    'specs': [
+        {
+            'endpoint': 'PaymentRecordAPI',
+            'route': '/PaymentRecordAPI.json',
+            'rule_filter': lambda rule: True,
+            'model_filter': lambda tag: True,
+        }
+    ],
+    'specs_route': "/apidocs/"
+}
+swagger = Swagger(app)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = (
      environ.get("dbURL") or "mysql+mysqlconnector://" + str(environ.get("DBLOGIN")) + "@localhost:3306/Project"
@@ -53,6 +72,17 @@ class PaymentRecord(db.Model):
 
 @app.route("/paymentrecord", methods=['GET'])
 def get_all():
+    """
+    Get all payment records
+    ---
+    tags:
+      - Payment Records
+    responses:
+      200:
+        description: Returns all payment records
+      404:
+        description: No payment records found
+    """
     payreclist = db.session.scalars(db.select(PaymentRecord)).all()
     print(payreclist)
     if len(payreclist):
@@ -73,7 +103,25 @@ def get_all():
 
 @app.route("/paymentrecord/<string:txnid>", methods=['GET'])
 def find_by_txnid(txnid):
-    """Get a specific payment record by transaction ID"""
+    # """Get a specific payment record by transaction ID"""
+    """
+    Get a specific payment record by transaction ID
+    ---
+    tags:
+      - Payment Records
+    parameters:
+      - in: path
+        name: txnid
+        required: true
+        schema:
+          type: string
+        description: Unique transaction ID
+    responses:
+      200:
+        description: Returns the specified payment record
+      404:
+        description: Payment record not found
+    """
     payment_record = db.session.query(PaymentRecord).filter_by(txnid=txnid).first()
     if payment_record:
         return jsonify(
@@ -91,16 +139,59 @@ def find_by_txnid(txnid):
 
 @app.route("/paymentrecord/create", methods=['POST'])
 def create_payment_record():
-    """
-    Create a new payment record based on a completed transaction
+    # """
+    # Create a new payment record based on a completed transaction
     
-    Expected request body:
-    {
-        "accnum_from": "1234123412341234",
-        "accnum_to": "0000000000000001",
-        "status": "successful",
-        "txnamt": 100
-    }
+    # Expected request body:
+    # {
+    #     "accnum_from": "1234123412341234",
+    #     "accnum_to": "0000000000000001",
+    #     "status": "successful",
+    #     "txnamt": 100
+    # }
+    # """
+    """
+    Create a new payment record
+    ---
+    tags:
+      - Payment Records
+    requestBody:
+      description: Payment record details
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - accnum_from
+              - accnum_to
+              - status
+              - txnamt
+            properties:
+              accnum_from:
+                type: string
+                description: Account number of sender
+              accnum_to:
+                type: string
+                description: Account number of recipient
+              status:
+                type: string
+                description: Transaction status (e.g., "successful")
+              txnamt:
+                type: integer
+                description: Transaction amount
+            example:
+              accnum_from: "1234123412341234"
+              accnum_to: "0000000000000001"
+              status: "successful"
+              txnamt: 100
+    responses:
+      201:
+        description: Payment record created successfully
+      400:
+        description: Invalid request - missing required fields
+      500:
+        description: Server error
     """
     data = request.get_json()
     
