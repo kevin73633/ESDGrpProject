@@ -280,10 +280,10 @@ import ReportButton from '../components/ReportButton.vue';
 import VerifyButton from '../components/VerifyButton.vue';
 
 // API configuration
-const AUTH_API_URL = 'http://localhost:8000'; // Auth API URL (matches your Flask user.py)
-const CHAT_API_URL = 'http://localhost:8000'; // Chat API URL (matches your Flask chat.py)
-const DEAL_API_URL = 'http://localhost:8000'; // Chat API URL (matches your Flask chat.py)
-const PRODUCT_API_URL = 'http://localhost:8000'; // Product API URL
+const AUTH_API_URL = 'http://localhost:5001'; // Auth API URL (matches your Flask user.py)
+const CHAT_API_URL = 'http://localhost:5087'; // Chat API URL (matches your Flask chat.py)
+const DEAL_API_URL = 'http://localhost:5020'; // Chat API URL (matches your Flask chat.py)
+const PRODUCT_API_URL = 'http://localhost:5005'; // Product API URL
 
 export default {
   name: 'ChatComponent',

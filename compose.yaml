@@ -300,10 +300,10 @@ services:
       retries: 5
     volumes:
       - pgdata:/var/lib/postgresql/data
-    
+
   kong-migration:
     image: kong/kong-gateway:3.9
-    platform: linux/amd64  
+    platform: linux/amd64  # <- required for Mac M1 chip. Otherwise, can remove
     command: "kong migrations bootstrap"
     restart: on-failure
     networks:
@@ -318,33 +318,24 @@ services:
   
   kong:
     image: kong/kong-gateway:3.9
-    platform: linux/amd64
+    platform: linux/amd64  # <- required for Mac M1 chip. Otherwise, can remove
     restart: always
     networks:
       - esd-net
     environment:
-      # KONG_DATABASE: postgres
-      # KONG_PG_HOST: kong-database
-      # KONG_PG_USER: kong
-      # KONG_PG_PASSWORD: password
-      KONG_DATABASE: "off"
-      KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yaml
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: password
       KONG_PROXY_ACCESS_LOG: /dev/stdout
       KONG_ADMIN_ACCESS_LOG: /dev/stdout
       KONG_PROXY_ERROR_LOG: /dev/stderr
       KONG_ADMIN_ERROR_LOG: /dev/stderr
       KONG_ADMIN_LISTEN: 0.0.0.0:8001
       KONG_ADMIN_GUI_URL: http://localhost:8002
-    # depends_on:
-    #   - kong-migration
-    # ports: # https://docs.konghq.com/gateway/latest/production/networking/default-ports/
-    #   - "8000:8000" # Takes incoming HTTP traffic from Consumers, and forwards it to upstream Services.
-    #   - "8001:8001" # Admin API. Listens for calls from the command line over HTTP.
-    #   - "8002:8002" # Kong Manager (GUI). Listens for HTTP traffic.
-      KONG_ADMIN_GUI_API_URL: http://localhost:8001
-    volumes:
-      - ./kong.yaml:/etc/kong/kong.yaml:ro
-    ports:
-      - "8000:8000"
-      - "8001:8001"
-      - "8002:8002"
+    depends_on:
+      - kong-migration
+    ports: # https://docs.konghq.com/gateway/latest/production/networking/default-ports/
+      - "8000:8000" # Takes incoming HTTP traffic from Consumers, and forwards it to upstream Services.
+      - "8001:8001" # Admin API. Listens for calls from the command line over HTTP.
+      - "8002:8002" # Kong Manager (GUI). Listens for HTTP traffic.
