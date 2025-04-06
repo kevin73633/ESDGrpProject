@@ -7,6 +7,7 @@ import boto3
 import pika
 import time
 import amqp_lib
+from flasgger import Swagger 
 
 app = Flask(__name__)
 CORS(app,
@@ -14,6 +15,24 @@ CORS(app,
      supports_credentials=True,
      methods=["GET", "POST", "OPTIONS"],
      allow_headers=["Content-Type", "Authorization"])
+
+# Add Swagger configuration
+app.config['SWAGGER'] = {
+    'title': 'Notification Service API',
+    'version': "1.0",
+    'openapi': "3.0.2",
+    'description': 'Notification service for processing and distributing event messages',
+    'specs': [
+        {
+            'endpoint': 'NotificationAPI',
+            'route': '/NotificationAPI.json',
+            'rule_filter': lambda rule: True,  # all in
+            'model_filter': lambda tag: True,  # all in
+        }
+    ],
+    'specs_route': "/apidocs/"
+}
+swagger = Swagger(app)
 
 # AWS Configuration
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
@@ -133,7 +152,19 @@ def process_notification(ch, method, properties, body):
 
 @app.route("/health", methods=['GET'])
 def health_check():
-    """Health check endpoint"""
+    # """Health check endpoint"""
+    """
+    Health check endpoint
+    ---
+    tags:
+      - Service Health
+    summary: Check if the notification service is running
+    description: Simple endpoint to verify the notification service is operational
+    responses:
+      200:
+        description: Service is healthy
+       
+    """
     return jsonify({"status": "healthy"}), 200
 
 def start_consumer():
