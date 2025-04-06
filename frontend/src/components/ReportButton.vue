@@ -1,7 +1,8 @@
 <template>
   <div>
-    <button @click="showModal = true" class="report-button">
-      <span class="report-icon">⚠️</span> Report
+    <button @click="fetchDealDetails" class="report-button" :disabled="isLoading">
+      <span v-if="isLoading" class="loading-spinner"></span>
+      <span v-else class="report-icon">⚠️</span> Report
     </button>
 
     <!-- Modal -->
@@ -39,6 +40,7 @@
 </template>
 
 <script>
+const DEAL_API_URL = 'http://localhost:8000'; 
 const REPORT_USER_API_URL = 'http://localhost:8000/report_user'; 
 import axios from 'axios';
 export default {
@@ -59,6 +61,7 @@ export default {
   },
   data() {
     return {
+      isLoading: false,
       showModal: false,
       reason: '',
       otherReasonText: '',
@@ -74,6 +77,40 @@ export default {
     }
   },
   methods: {
+    async fetchDealDetails() {
+          this.isLoading = true;
+          try {
+            this.showModal = true;
+            this.loadingDetails = true;
+            this.error = null;
+            this.showComplaintForm = false;
+            this.termsAccepted = false;
+            this.userRating = 0;
+            this.ratingFeedback = '';
+  
+            const dealResponse = await fetch(`${DEAL_API_URL}/deal/${this.dealId}`);
+            
+            if (!dealResponse.ok) {
+              throw new Error(`HTTP Error ${dealResponse.status}`);
+            }
+  
+            const contentType = dealResponse.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+              throw new Error("Expected JSON, received HTML or another format.");
+            }
+  
+            const dealData = await dealResponse.json();
+            console.log("Deal Data:", dealData); // Debugging
+            this.dealDetails = dealData.data;
+  
+          } catch (error) {
+            console.error('Error fetching deal details:', error);
+            this.error = error.message || "An unexpected error occurred.";
+          } finally {
+            this.loadingDetails = false;
+            this.isLoading = false;
+          }
+        },
     closeModal() {
       this.showModal = false;
       this.reason = '';
@@ -93,8 +130,15 @@ export default {
             Reason: this.finalReason,
             });
         
-        if (response.data.code === 200) {
-          this.$emit('report-submitted', response.data);
+            if (response.data.code === 200) {
+          // Emit an event with report data before closing the modal
+          this.$emit('report-submitted', {
+            ...response.data,
+            dealId: this.dealId,
+            // Include this flag to indicate immediate UI update needed
+            immediateUpdate: true 
+          });
+          
           this.closeModal();
           this.$emit('show-notification', {
             message: 'Report submitted successfully',

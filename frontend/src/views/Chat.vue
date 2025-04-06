@@ -932,11 +932,36 @@ export default {
     handleReportSubmitted(result) {
       console.log("Report submitted:", result);
       
-      // Show notification instead of adding system message
-      this.showNotification({
-        message: "Your report has been submitted and is under review by our team.",
-        type: "info"
-      });
+      // Immediately update UI to reflect the reported status
+      if (result.immediateUpdate && this.currentDeal) {
+        // Set the current deal status to -1 (reported)
+        this.currentDeal.status = -1;
+        
+        // Update the deal status in the chat users list
+        const user = this.chatUsers.find(u => u.dealid === this.currentDeal.id);
+        if (user) {
+          user.dealStatus = -1;
+        }
+        
+        // Show notification
+        this.showNotification({
+          message: "Your report has been submitted. This conversation has been closed.",
+          type: "info"
+        });
+        
+        // Force the UI to update and reflect the messaging disabled state
+        this.$nextTick(() => {
+          // Check that the input field or message form is properly disabled
+          this.validationError = "";
+          this.newMessage = ""; // Clear any pending message
+        });
+      } else {
+        // Fallback to basic notification if immediateUpdate flag not available
+        this.showNotification({
+          message: "Your report has been submitted and is under review by our team.",
+          type: "info"
+        });
+      }
     },
     
     // Show notification
