@@ -476,7 +476,7 @@ import { Modal, Toast } from 'bootstrap';
 import axios from 'axios';
 
 // API URL base - should match your backend
-const API_URL = 'http://localhost:5001';
+const API_URL = 'http://localhost:8000';
 const RATING_SERVICE_GET_URL = "https://personal-nzmfqiqp.outsystemscloud.com/RatingAPI_REST/rest/v1/userRating/RatedID/?RatedID=";
 
 export default {

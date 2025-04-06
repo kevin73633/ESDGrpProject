@@ -100,7 +100,7 @@ import axios from 'axios';
 axios.defaults.withCredentials = true;  // Enable sending cookies
 
 // API base URL - update this to match your Flask backend
-const API_URL = 'http://localhost:5001';
+const API_URL = 'http://localhost:8000';
 
 export default {
   name: 'LoginPage',

@@ -35,7 +35,7 @@ export default {
   methods: {
     async checkAuthStatus() {
       try {
-        const response = await axios.get('http://localhost:5001/check-auth', { 
+        const response = await axios.get('http://localhost:8000/check-auth', { 
           withCredentials: true 
         });
         
@@ -49,7 +49,7 @@ export default {
     async signOut() {
       try {
         // Call the backend logout endpoint
-        await axios.post('http://localhost:5001/logout', {}, { 
+        await axios.post('http://localhost:8000/logout', {}, { 
           withCredentials: true 
         });
         
