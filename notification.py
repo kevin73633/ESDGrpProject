@@ -23,16 +23,15 @@ AWS_REGION = os.environ.get('AWS_REGION', 'ap-southeast-1')
 # AMQP Configuration
 RABBITMQ_HOST = os.environ.get('RABBITMQ_HOST', 'localhost')
 RABBITMQ_EXCHANGE = os.environ.get('RABBITMQ_EXCHANGE', 'deal_events')
-RABBITMQ_QUEUE = os.environ.get('RABBITMQ_QUEUE', 'notification_queue')
+RABBITMQ_QUEUE1 = 'deal_confirmation_queue'
+RABBITMQ_QUEUE2 = 'deal_verification_queue'
+RABBITMQ_QUEUE3 = 'user_report_queue'
+
 
 def send_sms(phone_number, message):
     """
     Send SMS to any phone number using Amazon SNS
     """
-    return { #remove when not in debug
-            "success": True,
-            "message_id": 1
-        }
     try:
         # Initialize SNS client
         sns_client = boto3.client('sns',
@@ -104,18 +103,27 @@ def process_notification(ch, method, properties, body):
             # Also notify seller
             seller_phone = notification.get('seller', {}).get('phone')
             if seller_phone:
-                message = f"Your product {product_title} has been sold for ${product_price}. Deal ID: {deal_id}"
+                message = f"Your product {product_title} has been reserved for ${product_price}. Deal ID: {deal_id}"
                 send_sms(seller_phone, message)
-                
-        elif event_type == 'payment_released':
-            # Payment release notification
-            seller_phone = notification.get('seller', {}).get('phone')
+        elif event_type == 'deal_verified':
+            # Deal confirmation notification
+            buyer_phone = notification.get('buyer', {}).get('phone')
             product_title = notification.get('product', {}).get('title')
             product_price = notification.get('product', {}).get('price')
+            deal_id = notification.get('deal_id')
             
-            if seller_phone:
-                message = f"Payment of ${product_price} for {product_title} has been released to your account."
-                send_sms(seller_phone, message)
+            if buyer_phone:
+                message = f"Your purchase/sale of {product_title} for ${product_price} has been verified. Deal ID: {deal_id}"
+                send_sms(buyer_phone, message)
+        elif event_type == 'user_reported':
+            # Deal confirmation notification
+            reporter_phone = notification.get('reporter', {}).get('phone')
+            reporteduserid = notification.get('reported', {}).get('id')
+            deal_id = notification.get('deal_id')
+            
+            if reporter_phone:
+                message = f"Your report against user {reporteduserid} has been received. Deal ID: {deal_id}"
+                send_sms(reporter_phone, message)
                 
         # Log the notification
         print(f"Processed {event_type} notification")
@@ -130,12 +138,28 @@ def health_check():
 
 def start_consumer():
     """Start consuming messages from the notification queue"""
-    print(f"Starting notification consumer on queue {RABBITMQ_QUEUE}...")
+    print(f"Starting notification consumer on queue {RABBITMQ_QUEUE1}...")
     amqp_lib.start_consuming(
         hostname=RABBITMQ_HOST,
         exchange_name=RABBITMQ_EXCHANGE,
         exchange_type="topic",
-        queue_name=RABBITMQ_QUEUE,
+        queue_name=RABBITMQ_QUEUE1,
+        callback=process_notification
+    )
+    print(f"Starting notification consumer on queue {RABBITMQ_QUEUE2}...")
+    amqp_lib.start_consuming(
+        hostname=RABBITMQ_HOST,
+        exchange_name=RABBITMQ_EXCHANGE,
+        exchange_type="topic",
+        queue_name=RABBITMQ_QUEUE2,
+        callback=process_notification
+    )
+    print(f"Starting notification consumer on queue {RABBITMQ_QUEUE3}...")
+    amqp_lib.start_consuming(
+        hostname=RABBITMQ_HOST,
+        exchange_name=RABBITMQ_EXCHANGE,
+        exchange_type="topic",
+        queue_name=RABBITMQ_QUEUE3,
         callback=process_notification
     )
 

@@ -9,6 +9,8 @@ import uuid
 from datetime import datetime
 import amqp_lib
 from dotenv import load_dotenv
+from flasgger import Swagger
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -18,9 +20,29 @@ CORS(app,
      methods=["GET", "POST", "OPTIONS"],
      allow_headers=["Content-Type", "Authorization"])
 
+# Add Swagger configuration
+app.config['SWAGGER'] = {
+    'title': 'User Report API',
+    'version': "1.0",
+    'openapi': "3.0.2",
+    'description': 'API for handling user reporting workflow across multiple microservices',
+    'specs': [
+        {
+            'endpoint': 'ReportUserAPI',
+            'route': '/ReportUserAPI.json',
+            'rule_filter': lambda rule: True,  # all in
+            'model_filter': lambda tag: True,  # all in
+        }
+    ],
+    'specs_route': "/apidocs/"
+}
+swagger = Swagger(app)
+
 # Define microservice URLs
 DEAL_SERVICE_URL = "http://deal:5020"
 USER_SERVICE_URL = "http://user:5001"
+PRODUCT_SERVICE_URL = "http://product:5005"
+PAYMENT_SERVICE_URL = "http://payment:5031"
 CHAT_SERVICE_URL = "http://chat:5087"
 CHATGPT_SERVICE_URL = "http://chatgpt:5002"
 REPORTLOG_SERVICE_URL = "http://reportLog:5004"
@@ -36,82 +58,67 @@ AWS_REGION = os.environ.get('AWS_REGION')
 RABBITMQ_HOST = os.environ.get('RABBITMQ_HOST', 'localhost')
 RABBITMQ_EXCHANGE = os.environ.get('RABBITMQ_EXCHANGE', 'deal_events')
 
-def send_sms(phone_number, message):
-    return {
-            "success": True,
-            "message_id": 000
-        }
-    """
-    Send SMS to any phone number using Amazon SNS
-    
-    Args:
-        phone_number: Phone number in E.164 format (+6512345678)
-        message: The text message to send
-    
-    Returns:
-        Dictionary with success status and message ID or error
-    """
-    try:
-        # Initialize SNS client
-        sns_client = boto3.client('sns',
-            region_name=AWS_REGION,
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY
-        )
-        
-        # Format phone number if needed
-        if not phone_number.startswith('+'):
-            # Assuming Singapore number
-            if phone_number.startswith('0'):
-                phone_number = '+65' + phone_number[1:]
-            else:
-                phone_number = '+65' + phone_number
-        
-        # Send the SMS
-        response = sns_client.publish(
-            PhoneNumber=phone_number,
-            Message=message,
-            MessageAttributes={
-                'AWS.SNS.SMS.SenderID': {
-                    'DataType': 'String',
-                    'StringValue': 'DEALSVC'  # Custom sender ID
-                },
-                'AWS.SNS.SMS.SMSType': {
-                    'DataType': 'String',
-                    'StringValue': 'Transactional'  # Higher priority
-                }
-            }
-        )
-        
-        return {
-            "success": True,
-            "message_id": response.get('MessageId')
-        }
-        
-    except Exception as e:
-        print(f"Error sending SMS: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
-
 @app.route("/report_user", methods=['POST'])
 def report_user():
+    # """
+    # Report a user by orchestrating the entire user report flow
+    # """
     """
-    Report a user by orchestrating the entire user report flow
+    Report a user for inappropriate behavior
+    ---
+    tags:
+      - User Reporting
+    summary: Submit a user report and perform necessary actions
+    description: Process a user report, analyze chat for harmful content, update ratings if needed, and handle refunds if required
+    requestBody:
+      description: User report details
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - dealId
+              - Reason
+              - UserID
+              - ReportedUserID
+            properties:
+              dealId:
+                type: string
+                description: ID of the deal associated with the report
+              Reason:
+                type: string
+                description: Reason for reporting the user
+              UserID:
+                type: string
+                description: ID of the user submitting the report
+              ReportedUserID:
+                type: string
+                description: ID of the user being reported
+            example:
+              dealId: "11111111"
+              Reason: "Scam Behavior"
+              UserID: "12345678"
+              ReportedUserID: "22345678"
+    responses:
+      200:
+        description: User report processed successfully
+      404:
+        description: Deal, chat, or user not found
+      500:
+        description: Server error or processing failure
     """
     # Step 1: Get deal information
     
     dealid = request.json['dealId']
+    reason = request.json['Reason']
+    currentuserid = request.json['UserID']
+    reporteduserid = request.json['ReportedUserID']
 
     deal_result = invoke_http(f"{DEAL_SERVICE_URL}/deal/{dealid}", method="GET")
     if deal_result["code"] != 200:return jsonify({"code": 404,"message": f"Deal {dealid} not found."}), 404
     deal_data = deal_result["data"]["deal"]
 
-
-    reason = request.json['Reason']
-    currentuserid = request.json['UserID']
-    reporteduserid = request.json['ReportedUserID']
 
     chat_result = invoke_http(f"{CHAT_SERVICE_URL}/chat/getmessagebetween/{dealid}", method="GET")
     if chat_result["code"] != 200:return jsonify({"code": 404,"message": f"chat in {dealid} not found."}), 404
@@ -137,6 +144,39 @@ def report_user():
             "code": 404,
             "message": f"Rating failed: {reportLog_post_result['error']}"
         }), 404
+    
+    payment_result_string = None
+    # refund deal if reported
+    if (deal_data['status'] == 1 or deal_data['status'] == 3):
+        # Get buyer account number
+        user_account_result = invoke_http(f"{USER_SERVICE_URL}/user/getAccNumFromUser/{deal_data["buyerid"]}", method="GET")
+        if user_account_result["code"] != 200:return jsonify({"code": 404,"message": f"Buyer account information not found."}), 404
+        user_account = user_account_result["data"]["AccNum"]
+
+        # Step 2: Get product details
+        product_result = invoke_http(f"{PRODUCT_SERVICE_URL}/products/{deal_data['productid']}", method="GET")
+        if product_result["code"] != 200:return jsonify({"code": 404,"message": f"Product {deal_data['productid']} not found."}), 404
+        product_data = product_result["data"]["product"]
+
+        # Step 4: Process payment (escrow)
+        payment_payload = {
+            "accnum": user_account,
+            "amount": product_data["price"]
+        }
+        
+        payment_result = invoke_http(
+            f"{PAYMENT_SERVICE_URL}/payment/refund",
+            method="POST",
+            json=payment_payload
+        )
+        if payment_result["code"] != 200:
+            return jsonify({
+                "code": payment_result["code"],
+                "message": f"Payment failed: {payment_result['message']}"
+            }), payment_result["code"]
+        payment_result_string = payment_result["transaction"]
+        # implement compensating transaction here (refund) and set status to -1
+
     update_deal_payload = {"status": -1}
     update_deal_result = invoke_http(
         f"{DEAL_SERVICE_URL}/deal/{dealid}/status",
@@ -147,6 +187,7 @@ def report_user():
         return jsonify({
             "code": 200,
             "message": "User report not harmful",
+            "payment" : payment_result_string,
             "data": {
                 "is_harmful": chatgpt_data
             }
@@ -195,11 +236,7 @@ def report_user():
     
     
     
-    # Step 8: Update deal status to verified
-    if (deal_data['status'] > 0):
-        print("Refund")
-        # implement compensating transaction here (refund) and set status to -1
-
+    
     # Get buyer phone number (assuming you've added the endpoint in user.py)
     user_phone_result = invoke_http(f"{USER_SERVICE_URL}/user/getPhoneFromUser/{currentuserid}", method="GET")
     user_phone = None
@@ -224,17 +261,12 @@ def report_user():
     
     # Step 7: Send notifications via AMQP
     amqp_lib.publish_message(
-        routing_key="user.reported",
+        routing_key="user.reported.notification",
         message=notification_payload,
         exchange_name=RABBITMQ_EXCHANGE,
         hostname=RABBITMQ_HOST
     )
     
-    # Step 8: Send SMS notifications
-    sms_results = {}
-    if user_phone:
-        message = f"Your report against user {reporteduserid} has been received. Deal ID: {dealid}"
-        sms_results["buyer_sms"] = send_sms(user_phone, message)
     
     # Return success response with combined data
     return jsonify({
@@ -247,8 +279,7 @@ def report_user():
             "report_status": chatgpt_data,
             "report_reason": reason,
             "notifications": {
-                "amqp_sent": True,
-                "sms_results": sms_results
+                "amqp_sent": True
             }
         }
     })

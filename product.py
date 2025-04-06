@@ -4,14 +4,23 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from os import environ
 import os
+from flasgger import Swagger
 
 app = Flask(__name__)
-CORS(app,
-     origins=["http://localhost:8080"],  # Your Vue.js frontend URL
-     supports_credentials=True,
-     methods=["GET", "POST", "OPTIONS"],
-     allow_headers=["Content-Type", "Authorization"])
-
+CORS(app, resources={
+    r"/products": {
+        "origins": ["http://localhost:8080"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
+    },
+    r"/products/*": {
+        "origins": ["http://localhost:8080"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
+    }
+})
 # Change to MySQL connection with your specific credentials
 app.config["SQLALCHEMY_DATABASE_URI"] = environ.get("dbURL") or "mysql+mysqlconnector://" + str(environ.get("DBLOGIN")) + "@localhost:3306/Project"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -30,6 +39,7 @@ class Product(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at = db.Column(db.DateTime, nullable=True)
     userid = db.Column(db.String(64), nullable=False)
+    image_url = db.Column(db.String(500), nullable=False)
     
     def json(self):
         dto = {
@@ -41,7 +51,8 @@ class Product(db.Model):
             'price': self.price,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'expires_at': self.expires_at.isoformat() if self.expires_at else None,
-            'userid': self.userid
+            'userid': self.userid,
+            'image_url' : self.image_url        
         }
 
         # dto['order_item'] = []
@@ -53,6 +64,19 @@ class Product(db.Model):
 # Routes for Product CRUD operations
 @app.route('/products', methods=['GET'])
 def get_products():
+    """
+    Get all products
+    ---
+    tags:
+      - Products
+    responses:
+      200:
+        description: Returns all products
+        
+      404:
+        description: No products found
+        
+    """
     productlist = db.session.scalars(db.select(Product)).all()
     if len(productlist):
         return jsonify(
@@ -72,6 +96,26 @@ def get_products():
 
 @app.route('/products/<int:productid>', methods=['GET'])
 def get_product(productid):
+    """
+    Get a specific product by ID
+    ---
+    tags:
+      - Products
+    parameters:
+      - in: path
+        name: productid
+        required: true
+        schema:
+          type: integer
+        description: ID of the product to retrieve
+    responses:
+      200:
+        description: Returns the specified product
+        
+      404:
+        description: Product not found
+       
+    """
     product = db.session.scalar(db.select(Product).filter_by(productid=productid))
     if product:
         return jsonify(
@@ -91,14 +135,78 @@ def get_product(productid):
 
 @app.route('/products', methods=['POST'])
 def create_product():
+    """
+    Create a new product
+    ---
+    tags:
+      - Products
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - title
+              - category
+              - description
+              - location
+              - price
+              - userid
+            properties:
+              title:
+                type: string
+                description: Product title
+              category:
+                type: string
+                description: Product category
+              description:
+                type: string
+                description: Product description
+              location:
+                type: string
+                description: Product location
+              price:
+                type: number
+                format: float
+                description: Product price
+              userid:
+                type: string
+                description: ID of the user creating the product
+              expires_at:
+                type: string
+                format: date-time
+                description: Expiration date (optional)
+    responses:
+      201:
+        description: Product created successfully
+       
+      400:
+        description: Missing required fields
+       
+      500:
+        description: Server error
+       
+    """
     data = request.get_json()
     
     # Basic validation
-    if not all(key in data for key in ['title', 'category', 'description', 'location', 'price', 'userid']):
+    if not all(key in data for key in ['title', 'category', 'description', 'location', 'price', 'userid', 'image_url']):
         return jsonify({
             "code": 400,
             "message": "Missing required fields"
         }), 400
+        
+    image_url = data.get('image_url', '')
+    if image_url:
+        # Basic URL validation
+        if not image_url.startswith(('http://', 'https://')):
+            return jsonify({
+                "code": 400,
+                "message": "Invalid image URL"
+            }), 400
+    else:
+        # Use a default placeholder if no image URL provided
+        data['image_url'] = '/default-placeholder.jpg'
         
     try:
         # Handle expires_at if provided
@@ -113,6 +221,7 @@ def create_product():
             location=data['location'],
             price=data['price'],
             userid=data['userid'],
+            image_url = data['image_url'],
             expires_at=expires_at
         )
     
@@ -134,6 +243,55 @@ def create_product():
 
 @app.route('/products/<int:productid>', methods=['PUT'])
 def update_product(productid):
+    """
+    Update an existing product
+    ---
+    tags:
+      - Products
+    parameters:
+      - in: path
+        name: productid
+        required: true
+        schema:
+          type: integer
+        description: ID of the product to update
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              title:
+                type: string
+                description: Product title
+              category:
+                type: string
+                description: Product category
+              description:
+                type: string
+                description: Product description
+              location:
+                type: string
+                description: Product location
+              price:
+                type: number
+                format: float
+                description: Product price
+              expires_at:
+                type: string
+                format: date-time
+                description: Expiration date
+    responses:
+      200:
+        description: Product updated successfully
+        
+      404:
+        description: Product not found
+        
+      500:
+        description: Server error
+        
+    """   
     try:
         product = db.session.get(Product, productid)
         if not product:
@@ -173,6 +331,29 @@ def update_product(productid):
 
 @app.route('/products/<int:productid>', methods=['DELETE'])
 def delete_product(productid):
+    """
+    Delete a product
+    ---
+    tags:
+      - Products
+    parameters:
+      - in: path
+        name: productid
+        required: true
+        schema:
+          type: integer
+        description: ID of the product to delete
+    responses:
+      200:
+        description: Product deleted successfully
+       
+      404:
+        description: Product not found
+        
+      500:
+        description: Server error
+        
+    """
     try:
         product = db.session.get(Product, productid)
         if not product:
@@ -198,6 +379,27 @@ def delete_product(productid):
 # Route to get products by user
 @app.route('/users/<string:userid>/products', methods=['GET'])
 def get_user_products(userid):
+    """
+    Get all products from a specific user
+    ---
+    tags:
+      - Products
+      - Users
+    parameters:
+      - in: path
+        name: userid
+        required: true
+        schema:
+          type: string
+        description: ID of the user to get products for
+    responses:
+      200:
+        description: Returns all products from the specified user
+        
+      404:
+        description: No products found for the user
+       
+    """
     productlist = db.session.scalars(db.select(Product).filter_by(userid=userid)).all()
     if len(productlist):
         return jsonify(
@@ -218,6 +420,26 @@ def get_user_products(userid):
 # Route to get products by category
 @app.route('/products/category/<string:category>', methods=['GET'])
 def get_products_by_category(category):
+    """
+    Get all products in a specific category
+    ---
+    tags:
+      - Products
+    parameters:
+      - in: path
+        name: category
+        required: true
+        schema:
+          type: string
+        description: Category to filter products by
+    responses:
+      200:
+        description: Returns all products in the specified category
+        
+      404:
+        description: No products found in the category
+       
+    """
     productlist = db.session.scalars(db.select(Product).filter_by(category=category)).all()
     if len(productlist):
         return jsonify(

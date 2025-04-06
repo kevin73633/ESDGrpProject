@@ -9,8 +9,26 @@ from flask_sqlalchemy import SQLAlchemy
 from os import environ
 import os
 import uuid
+from flasgger import Swagger
 
 app = Flask(__name__)
+
+app.config['SWAGGER'] = {
+    'title': 'Chat API',
+    'version': "1.0",
+    'openapi': "3.0.2",
+    'description': 'API for managing chat messages between users',
+    'specs': [
+        {
+            'endpoint': 'ChatAPI',
+            'route': '/ChatAPI.json',
+            'rule_filter': lambda rule: True,  # all in
+            'model_filter': lambda tag: True,  # all in
+        }
+    ],
+    'specs_route': "/apidocs/"
+}
+swagger = Swagger(app)
 
 CORS(app,
      origins=["http://localhost:8080"],  # Your Vue.js frontend URL
@@ -55,6 +73,18 @@ class Chat(db.Model):
 
 @app.route("/chat", methods=['GET'])
 def get_all():
+    """
+    Get all chat messages
+    ---
+    tags:
+      - Chat
+    responses:
+      200:
+        description: Returns all chat messages
+        
+      404:
+        description: No messages found
+    """
     messages = db.session.scalars(db.select(Chat)).all()
     print(messages)
     if len(messages):
@@ -75,6 +105,27 @@ def get_all():
 
 @app.route("/chat/getmessagebetween/<string:dealid>", methods=['GET'])
 def getChatBetween(dealid):
+    """
+    Get all chat messages for a specific deal
+    ---
+    tags:
+      - Chat
+    parameters:
+      - in: path
+        name: dealid
+        required: true
+        schema:
+          type: string
+        description: ID of the deal to get messages for
+    responses:
+      200:
+        description: Returns all messages for the specified deal
+        
+      404:
+        description: No messages found for the deal
+       
+    """
+    # Your existing implementation remains the same
     messages = db.session.scalars(db.select(Chat).filter_by(dealid=dealid).order_by(Chat.sentat))
     print(messages)
     if messages:
@@ -95,6 +146,48 @@ def getChatBetween(dealid):
     
 @app.route("/chat/send", methods=['POST'])
 def send_message():
+    """
+    Send a new chat message
+    ---
+    tags:
+      - Chat
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - senderid
+              - receiverid
+              - dealid
+              - message
+            properties:
+              senderid:
+                type: string
+                description: ID of the user sending the message
+              receiverid:
+                type: string
+                description: ID of the user receiving the message
+              dealid:
+                type: string
+                description: ID of the deal associated with the chat
+              message:
+                type: string
+                description: Content of the message
+              sentat:
+                type: string
+                description: Timestamp when the message was sent (optional, defaults to current time)
+    responses:
+      201:
+        description: Message sent successfully
+        
+      400:
+        description: Missing required fields
+        
+      500:
+        description: Server error
+        
+    """
     try:
         data = request.get_json()
         print("Received data:", data)  # Debug: log received data

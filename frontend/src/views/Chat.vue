@@ -53,19 +53,47 @@
                     <div class="flex-grow-1">
                       <div class="d-flex justify-content-between">
                         <p class="fw-bold mb-0">{{ user.name }}</p>
-                        <p class="small text-muted">{{ user.lastMessageTime || '' }}</p>
+                        <div>
+                          <!-- Add a "Closed" badge if deal is closed -->
+                          <span v-if="user.dealStatus === 4 || user.dealStatus === -1" class="badge bg-secondary me-1">Closed</span>
+                          <p class="small text-muted d-inline">{{ user.lastMessageTime || '' }}</p>
+                        </div>
                       </div>
                       <p class="small text-muted text-truncate mb-0" style="max-width: 160px;">{{ user.lastMessage || 'No messages yet' }}</p>
                     </div>
                   </div>
                 </li>
               </ul>
-            </div>  
+            </div>
           </div>
         </div>
         
         <!-- Main content area -->
         <div class="col-md-9 d-flex flex-column" style="height: 100vh; overflow: hidden;">
+          <!-- Deal Confirmation Banner (when confirmed) -->
+          <div v-if="currentDeal && currentDeal.status==3" class="alert alert-success mb-3 d-flex align-items-center">
+            <i class="fas fa-check-circle me-2 fs-5"></i>
+            <div>
+              <strong>Deal Confirmed!</strong> 
+              <p class="mb-0 small">This deal has been confirmed and is now active.</p>
+            </div>
+            <div class="ms-auto">
+              <span class="badge bg-success">Confirmed</span>
+            </div>
+          </div>
+
+          <!-- Deal Confirmation Banner (when confirmed) -->
+          <div v-if="currentDeal && currentDeal.status==4" class="alert alert-success mb-3 d-flex align-items-center">
+            <i class="fas fa-check-circle me-2 fs-5"></i>
+            <div>
+              <strong>Deal Verified!</strong> 
+              <p class="mb-0 small">This deal has been verified and is now closed.</p>
+            </div>
+            <div class="ms-auto">
+              <span class="badge bg-success">Verified</span>
+            </div>
+          </div>
+
           <!-- Header with user info -->
           <div class="p-3 border-bottom">
             <div class="d-flex justify-content-between align-items-center">
@@ -92,7 +120,7 @@
                   <i class="bi bi-bell"></i>
                 </button>
                 <button class="btn btn-sm btn-light" @click="goToProfile">
-                  <i class="bi bi-cog">profile</i>
+                  <i class="bi bi-person-circle">profile</i>
                 </button>
               </div>
             </div>
@@ -100,17 +128,6 @@
           
           <!-- Chat content area (scrollable) -->
           <div ref="chatContent" class="flex-grow-1 overflow-auto p-3" id="chat-content">
-            <!-- Deal Confirmation Banner (when confirmed) -->
-            <div v-if="currentDeal && currentDeal.status==1" class="alert alert-success mb-3 d-flex align-items-center">
-              <i class="fas fa-check-circle me-2 fs-5"></i>
-              <div>
-                <strong>Deal Confirmed!</strong> 
-                <p class="mb-0 small">This deal has been confirmed and is now active.</p>
-              </div>
-              <div class="ms-auto">
-                <span class="badge bg-success">Confirmed</span>
-              </div>
-            </div>
           
             <!-- Deal card (if applicable) -->
             <div class="card mb-3" v-if="currentDeal && currentDeal.id">
@@ -221,7 +238,16 @@
             
             <!-- Message input form -->
             <form @submit.prevent="sendMessage" class="w-100">
-              <div class="input-group">
+              <div v-if="isMessagingDisabled">
+                <span v-if="currentDeal && currentDeal.status === 4"  class="alert alert-secondary">
+                  This conversation is closed as the deal has been completed.
+                </span>
+                <span v-else-if="currentDeal && currentDeal.status === -1"  class="alert alert-danger">
+                  This conversation is closed as the chat has been reported.
+                </span>
+              </div>
+
+              <div v-if="!isMessagingDisabled"class="input-group">
                 <input 
                   v-model="newMessage" 
                   type="text" 
@@ -261,10 +287,10 @@ import ReportButton from '../components/ReportButton.vue';
 import VerifyButton from '../components/VerifyButton.vue';
 
 // API configuration
-const AUTH_API_URL = 'http://localhost:5001'; // Auth API URL (matches your Flask user.py)
-const CHAT_API_URL = 'http://localhost:5087'; // Chat API URL (matches your Flask chat.py)
-const DEAL_API_URL = 'http://localhost:5020'; // Chat API URL (matches your Flask chat.py)
-const PRODUCT_API_URL = 'http://localhost:5005'; // Product API URL
+const AUTH_API_URL = 'http://localhost:8000'; // Auth API URL (matches your Flask user.py)
+const CHAT_API_URL = 'http://localhost:8000'; // Chat API URL (matches your Flask chat.py)
+const DEAL_API_URL = 'http://localhost:8000'; // Chat API URL (matches your Flask chat.py)
+const PRODUCT_API_URL = 'http://localhost:8000'; // Product API URL
 
 export default {
   name: 'ChatComponent',
@@ -332,8 +358,14 @@ export default {
     
     // Determine if we can show the report button
     canShowReportButton() {
-      if (!this.currentDeal) return false;
+    if (!this.currentDeal) return false;
+      if (this.currentDeal.status === 4 || this.currentDeal.status === -1) return false; // Don't show report button for closed deals
       return this.selectedChatUserId && this.currentUserId && this.selectedChatUserId !== this.currentUserId;
+    },
+    
+    // Add new computed property to check if messaging is disabled
+    isMessagingDisabled() {
+      return this.currentDeal && (this.currentDeal.status === 4 || this.currentDeal.status === -1);
     }
   },
   mounted() {
@@ -362,6 +394,20 @@ export default {
     },
     
     goToProfile() {
+      if (this.selectedChatUserId) {
+        // If looking at another user's profile
+        this.$router.push({ 
+          name: 'OtherProfile', 
+          params: { id: this.selectedChatUserId } 
+        });
+      } else {
+        // Go to own profile
+        this.$router.push({ name: 'Profile' });
+      }
+    },
+
+    // To view your own profile from any page, add this method:
+    goToMyProfile() {
       this.$router.push({ name: 'Profile' });
     },
     
@@ -402,135 +448,158 @@ export default {
     
     // Load users for chat sidebar
     async loadUsers() {
-  try {
-    this.isLoading = true;
-    this.apiError = null;
-    
-    // Get all deals for the current user
-    this.chatUsers = [];
-    
-    console.log("Fetching deals for user:", this.currentUserId);
-    const dealsResponse = await axios.get(`${DEAL_API_URL}/get_deals_with_user/${this.currentUserId}`);
-    
-    // Log the deals response for debugging
-    console.log("Deals response:", dealsResponse.data);
-    
-    if (dealsResponse.data.code === 200 && dealsResponse.data.data && dealsResponse.data.data.deals) {
-      const deals = dealsResponse.data.data.deals;
-      console.log(`Found ${deals.length} deals`);
-      
-      // For each deal, get the other user's information
-      for (let deal of deals) {
-        // Determine the other user ID (seller or buyer)
-        const otherUserId = (this.currentUserId == deal.sellerid) 
-          ? deal.buyerid 
-          : deal.sellerid;
+      try {
+        this.isLoading = true;
+        this.apiError = null;
         
-        console.log(`Processing deal ${deal.dealid} with other user ${otherUserId}`);
+        // Get all deals for the current user
+        this.chatUsers = [];
         
+        console.log("Fetching deals for user:", this.currentUserId);
         try {
-          console.log(`Fetching user data for ID: ${otherUserId}`);
-          const userResponse = await axios.get(`${AUTH_API_URL}/user/${otherUserId}`, { 
-            withCredentials: true 
-          });
+          const dealsResponse = await axios.get(`${DEAL_API_URL}/get_deals_with_user/${this.currentUserId}`);
           
-          // Log the complete user response for debugging
-          console.log(`User API response for ${otherUserId}:`, userResponse.data);
+          // Log the deals response for debugging
+          console.log("Deals response:", dealsResponse.data);
           
-          // Create a placeholder user if we can't get real data
-          let userData = {
-            uid: otherUserId,
-            name: `User ${otherUserId.substring(0, 4)}...`,
-            online: false,
-            rating: 0
-          };
+          // Check if response has deals data
+          let deals = [];
           
-          // Try to extract actual user data if available
-          if (userResponse.data.code === 200 && userResponse.data.data) {
-            // Check different possible structures
-            if (userResponse.data.data.user) {
-              if (Array.isArray(userResponse.data.data.user) && userResponse.data.data.user.length > 0) {
-                // If it's an array, use the first item
-                const user = userResponse.data.data.user[0];
-                if (user && user.uid) {
-                  userData = {
-                    uid: user.uid,
-                    name: user.name || `User ${user.uid.substring(0, 4)}...`,
-                    online: false,
-                    rating: user.rating || 0
-                  };
-                }
-              } else if (userResponse.data.data.user.uid) {
-                // If it's a direct object
-                const user = userResponse.data.data.user;
-                userData = {
-                  uid: user.uid,
-                  name: user.name || `User ${user.uid.substring(0, 4)}...`,
-                  online: false,
-                  rating: user.rating || 0
-                };
-              }
+          if (dealsResponse.data.code === 200) {
+            if (dealsResponse.data.data && Array.isArray(dealsResponse.data.data.deals)) {
+              deals = dealsResponse.data.data.deals;
             }
+            
+            console.log(`Found ${deals.length} deals`);
+            
+            // Process deals if there are any
+            if (deals.length > 0) {
+              // For each deal, get the other user's information
+              for (let deal of deals) {
+                // Determine the other user ID (seller or buyer)
+                const otherUserId = (this.currentUserId == deal.sellerid) 
+                  ? deal.buyerid 
+                  : deal.sellerid;
+                
+                console.log(`Processing deal ${deal.dealid} with other user ${otherUserId}`);
+                
+                try {
+                  console.log(`Fetching user data for ID: ${otherUserId}`);
+                  const userResponse = await axios.get(`${AUTH_API_URL}/user/${otherUserId}`, { 
+                    withCredentials: true 
+                  });
+                  
+                  // Log the complete user response for debugging
+                  console.log(`User API response for ${otherUserId}:`, userResponse.data);
+                  
+                  // Create a placeholder user if we can't get real data
+                  let userData = {
+                    uid: otherUserId,
+                    name: `User ${otherUserId.substring(0, 4)}...`,
+                    online: false,
+                    rating: 0
+                  };
+                  
+                  // Try to extract actual user data if available
+                  if (userResponse.data.code === 200 && userResponse.data.data) {
+                    // Check different possible structures
+                    if (userResponse.data.data.user) {
+                      if (Array.isArray(userResponse.data.data.user) && userResponse.data.data.user.length > 0) {
+                        // If it's an array, use the first item
+                        const user = userResponse.data.data.user[0];
+                        if (user && user.uid) {
+                          userData = {
+                            uid: user.uid,
+                            name: user.name || `User ${user.uid.substring(0, 4)}...`,
+                            online: false,
+                            rating: user.rating || 0
+                          };
+                        }
+                      } else if (userResponse.data.data.user.uid) {
+                        // If it's a direct object
+                        const user = userResponse.data.data.user;
+                        userData = {
+                          uid: user.uid,
+                          name: user.name || `User ${user.uid.substring(0, 4)}...`,
+                          online: false,
+                          rating: user.rating || 0
+                        };
+                      }
+                    }
+                  }
+                  
+                  this.chatUsers.push({
+                    uid: userData.uid,
+                    name: userData.name,
+                    online: userData.online,
+                    active: false,
+                    lastMessage: '',
+                    lastMessageTime: '',
+                    rating: userData.rating,
+                    dealid: deal.dealid
+                  });
+                  
+                  console.log(`Added user to chat list: ${userData.name} (${userData.uid})`);
+                  
+                } catch (userError) {
+                  console.error(`Error fetching user ${otherUserId}:`, userError);
+                  
+                  // Still add user with minimal data since we know they exist
+                  this.chatUsers.push({
+                    uid: otherUserId,
+                    name: `User ${otherUserId.substring(0, 4)}...`, // Show partial ID as name
+                    online: false,
+                    active: false,
+                    lastMessage: '',
+                    lastMessageTime: '',
+                    rating: 0,
+                    dealid: deal.dealid,
+                    dealStatus: deal.status
+                  });
+                  
+                  console.log(`Added placeholder user for ID ${otherUserId}`);
+                }
+              }
+              
+              console.log(`Final chat users count: ${this.chatUsers.length}`);
+              
+              // If we have users, select the first one
+              if (this.chatUsers.length > 0) {
+                console.log("Selecting first chat user:", this.chatUsers[0]);
+                this.selectChat(this.chatUsers[0].uid, this.chatUsers[0].dealid);
+              }
+            } else {
+              // No deals found, but this is OK - just an empty list
+              console.log("No deals found for current user - this is normal");
+              this.selectedChatUser = null;
+              this.selectedChatUserId = null;
+              this.selectedDealId = null;
+              this.messages = [];
+              this.currentDeal = null;
+            }
+          } else {
+            // Non-200 response is an actual error
+            console.error("Invalid deals response code:", dealsResponse.data.code);
+            this.apiError = "Failed to load deals. Please try again later.";
           }
-          
-          // Add to chat users with fallback data if needed
-          this.chatUsers.push({
-            uid: userData.uid,
-            name: userData.name,
-            online: userData.online,
-            active: false,
-            lastMessage: '',
-            lastMessageTime: '',
-            rating: userData.rating,
-            dealid: deal.dealid
-          });
-          
-          console.log(`Added user to chat list: ${userData.name} (${userData.uid})`);
-          
-        } catch (userError) {
-          console.error(`Error fetching user ${otherUserId}:`, userError);
-          
-          // Still add user with minimal data since we know they exist
-          this.chatUsers.push({
-            uid: otherUserId,
-            name: `User ${otherUserId.substring(0, 4)}...`, // Show partial ID as name
-            online: false,
-            active: false,
-            lastMessage: '',
-            lastMessageTime: '',
-            rating: 0,
-            dealid: deal.dealid
-          });
-          
-          console.log(`Added placeholder user for ID ${otherUserId}`);
+        } catch (dealError) {
+          // Check if this is a 404 "No deals found" response
+          if (dealError.response && dealError.response.status === 404) {
+            console.log("No deals found (404 response) - this is normal");
+            // This is a valid state, not an error
+          } else {
+            // This is an actual error
+            console.error("Error fetching deals:", dealError);
+            this.apiError = "Failed to load deals. Please try again later.";
+          }
         }
+      } catch (error) {
+        console.error("Error in loadUsers method:", error);
+        this.apiError = "Failed to load conversations. Please try again later.";
+      } finally {
+        this.isLoading = false;
       }
-      
-      console.log(`Final chat users count: ${this.chatUsers.length}`);
-    } else {
-      console.error("Invalid deals response format:", dealsResponse.data);
-      this.apiError = "Failed to load deals. Invalid response format.";
-    }
-    
-    // If we have users, select the first one
-    if (this.chatUsers.length > 0) {
-      console.log("Selecting first chat user:", this.chatUsers[0]);
-      this.selectChat(this.chatUsers[0].uid, this.chatUsers[0].dealid);
-    } else {
-      console.log("No chat users found");
-      this.selectedChatUser = null;
-      this.selectedChatUserId = null;
-      this.selectedDealId = null;
-      this.messages = [];
-      this.currentDeal = null;
-    }
-  } catch (error) {
-    console.error("Error loading users:", error);
-    this.apiError = "Failed to load users. Please try again later.";
-  } finally {
-    this.isLoading = false;
-  }
-},
+    },
     
     // Select a chat
     selectChat(userId, dealId) {
@@ -593,6 +662,11 @@ export default {
                 imageUrl: productData.image_url || null
               }
             };
+
+            const chatUser = this.chatUsers.find(user => user.dealid === dealId);
+              if (chatUser) {
+                chatUser.dealStatus = dealData.status;
+              }
           } else {
             // Deal exists but product details couldn't be fetched
             this.currentDeal = {
@@ -608,6 +682,10 @@ export default {
                 description: 'Product details unavailable'
               }
             };
+            const chatUser = this.chatUsers.find(user => user.dealid === dealId);
+            if (chatUser) {
+              chatUser.dealStatus = dealData.status;
+            }
           }
         } else {
           this.currentDeal = null;
@@ -688,6 +766,22 @@ export default {
     // Send message methods
     async sendMessage() {
       // Validate message content
+      if (this.isMessagingDisabled) {
+        if (this.currentDeal.status === 4){
+          this.showNotification({
+          message: "This conversation is closed as the deal has been completed.",
+          type: "warning"
+          });
+        }
+        else if(this.currentDeal.status == -1){
+          this.showNotification({
+          message: "This conversation is closed as the chat has been reported.",
+          type: "warning"
+        })
+        }
+        return;
+      }
+
       if (!this.newMessage.trim()) {
         this.validationError = "Please enter a message";
         return;
@@ -735,6 +829,23 @@ export default {
     },
     
     sendQuickReply(text) {
+      // Check if messaging is disabled for closed deals
+      if (this.isMessagingDisabled) {
+        if (this.currentDeal.status === 4){
+          this.showNotification({
+          message: "This conversation is closed as the deal has been completed.",
+          type: "warning"
+          });
+        }
+        else if(this.currentDeal.status == -1){
+          this.showNotification({
+          message: "This conversation is closed as the chat has been reported.",
+          type: "warning"
+        })
+        }
+        return;
+      }
+      
       // Set the text in the input field
       this.newMessage = text;
       // Send the message
@@ -755,9 +866,18 @@ export default {
       return this.selectedChatUserId || "";
     },
 
-    // Handle deal confirmation result
     handleDealConfirmed(result) {
       console.log("Deal confirmed:", result);
+      
+    // Check if the result indicates insufficient funds
+    if (result.isInsufficientFunds) {
+        // Show an error notification about insufficient funds
+        this.showNotification({
+            message: result.error || 'Insufficient funds in your account. Please add funds to proceed.',
+            type: 'error'
+        });
+        return;
+    }
       
       // Update current deal status to confirmed
       if (this.currentDeal) {
@@ -786,7 +906,7 @@ export default {
 
     // Handle deal verified result
     handleDealVerified(data) {
-      console.log("Deal verified:", data);
+      console.log("Deal verified:", data); 
       
       // Update current deal status to verified
       if (this.currentDeal) {
@@ -812,11 +932,36 @@ export default {
     handleReportSubmitted(result) {
       console.log("Report submitted:", result);
       
-      // Show notification instead of adding system message
-      this.showNotification({
-        message: "Your report has been submitted and is under review by our team.",
-        type: "info"
-      });
+      // Immediately update UI to reflect the reported status
+      if (result.immediateUpdate && this.currentDeal) {
+        // Set the current deal status to -1 (reported)
+        this.currentDeal.status = -1;
+        
+        // Update the deal status in the chat users list
+        const user = this.chatUsers.find(u => u.dealid === this.currentDeal.id);
+        if (user) {
+          user.dealStatus = -1;
+        }
+        
+        // Show notification
+        this.showNotification({
+          message: "Your report has been submitted. This conversation has been closed.",
+          type: "info"
+        });
+        
+        // Force the UI to update and reflect the messaging disabled state
+        this.$nextTick(() => {
+          // Check that the input field or message form is properly disabled
+          this.validationError = "";
+          this.newMessage = ""; // Clear any pending message
+        });
+      } else {
+        // Fallback to basic notification if immediateUpdate flag not available
+        this.showNotification({
+          message: "Your report has been submitted and is under review by our team.",
+          type: "info"
+        });
+      }
     },
     
     // Show notification
@@ -840,11 +985,54 @@ export default {
       this.showConfirmationModal = false;
     },
     
-    confirmDeal() {
-      // Implement your deal confirmation logic here
-      this.dealDetails.status = 1;
-      this.dealConfirmed = true;
-      this.showConfirmationModal = false;
+    async confirmDeal() {
+      try {
+        // Make an API call to confirm the deal
+        const response = await axios.post(`/confirm_deal/${this.dealId}/${this.userId}`, {
+          // Any additional payload if needed
+        });
+
+        // If successful, update deal status
+        this.dealDetails.status = 1;
+        this.dealConfirmed = true;
+        this.showConfirmationModal = false;
+
+        // Emit success event
+        this.$emit('deal-confirmed', {
+          product: {
+            title: this.productTitle,
+            price: this.price
+          }
+        });
+      } catch (error) {
+        // Extract specific error message
+        const errorMessage = error.response?.data?.message || 
+                            'Failed to confirm deal';
+        
+        // Check for insufficient funds specifically
+        const isInsufficientFunds = errorMessage.toLowerCase().includes('insufficient funds');
+        
+        // If insufficient funds, show specific error
+        if (isInsufficientFunds) {
+          this.$emit('deal-confirmed', { 
+            error: 'Insufficient funds in your account. Please add funds to proceed.',
+            isInsufficientFunds: true,
+            product: {
+              title: this.productTitle,
+              price: this.price
+            }
+          });
+        } else {
+          // For other errors, emit generic error
+          this.$emit('deal-confirmed', { 
+            error: errorMessage,
+            product: {
+              title: this.productTitle,
+              price: this.price
+            }
+          });
+        }
+      }
     },
     
     getStatusBadgeClass() {
@@ -1055,5 +1243,46 @@ export default {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+.notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 15px;
+  border-radius: 5px;
+  z-index: 1000;
+  max-width: 90%;
+  text-align: center;
+}
+
+.notification.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.notification.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.notification.info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.close-notification {
+  background: none;
+  border: none;
+  color: inherit;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
 }
 </style>

@@ -3,6 +3,7 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from os import environ
+from flasgger import Swagger
 
 app = Flask(__name__)
 CORS(app,
@@ -15,6 +16,24 @@ CORS(app,
 app.config["SQLALCHEMY_DATABASE_URI"] = environ.get("dbURL") or "mysql+mysqlconnector://" + str(environ.get("DBLOGIN")) + "@localhost:3306/Project"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+app.config['SWAGGER'] = {
+    'title': 'Report Log API',
+    'version': "1.0",
+    'openapi': "3.0.2",
+    'description': 'API for managing user reports and report logs',
+    'specs': [
+        {
+            'endpoint': 'ReportLogAPI',
+            'route': '/ReportLogAPI.json',
+            'rule_filter': lambda rule: True,  # all in
+            'model_filter': lambda tag: True,  # all in
+        }
+    ],
+    'specs_route': "/apidocs/"
+}
+
+swagger = Swagger(app)
 
 # ReportLog Model
 class ReportLog(db.Model):
@@ -39,13 +58,42 @@ class ReportLog(db.Model):
 
 @app.route("/reportLog", methods=["POST"])
 def create_report_log():
-    """Create a new report log entry."""
-    """{
-        "UserID": 12345678,
-        "ReportedUserID": 22345678,
-        "Reason": "Scam behaviour",
-        "Status": "Pending"
-        }"""
+    """
+    Create a new report log entry
+    ---
+    tags:
+      - Report Logs
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - UserID
+              - ReportedUserID
+              - Reason
+              - Status
+            properties:
+              UserID:
+                type: integer
+                description: ID of the user submitting the report
+              ReportedUserID:
+                type: integer
+                description: ID of the user being reported
+              Reason:
+                type: string
+                description: Reason for the report
+              Status:
+                type: string
+                description: Status of the report (default is "Pending")
+    responses:
+      200:
+        description: Report created successfully
+        
+      500:
+        description: Server error
+        
+    """
     try:
         data = request.json
         new_report = ReportLog(
@@ -63,7 +111,27 @@ def create_report_log():
 
 @app.route("/reportLog/<int:ReportID>", methods=["GET"])
 def get_report_log(ReportID):
-    """Retrieve a report log entry by ReportID."""
+    """
+    Retrieve a report log entry by ReportID
+    ---
+    tags:
+      - Report Logs
+    parameters:
+      - in: path
+        name: ReportID
+        required: true
+        schema:
+          type: integer
+        description: The ID of the report to retrieve
+    responses:
+      200:
+        description: Report found
+      404:
+        description: Report not found
+      500:
+        description: Server error
+    
+    """
     try:
         report = db.session.get(ReportLog, ReportID)
         if report:

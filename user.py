@@ -5,6 +5,7 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from os import environ
 import os
+from flasgger import Swagger
 import requests
 import boto3
 import random
@@ -26,6 +27,42 @@ def after_request(response):
         response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
         response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
     return response
+
+# Add Swagger configuration
+app.config['SWAGGER'] = {
+    'title': 'User API',
+    'version': "1.0",
+    'openapi': "3.0.2",
+    'description': 'API for managing user accounts, authentication, and user information',
+    'specs': [
+        {
+            'endpoint': 'UserAPI',
+            'route': '/UserAPI.json',
+            'rule_filter': lambda rule: True,  # all in
+            'model_filter': lambda tag: True,  # all in
+        }
+    ],
+    'specs_route': "/apidocs/"
+}
+swagger = Swagger(app)
+
+# Add Swagger configuration
+app.config['SWAGGER'] = {
+    'title': 'User API',
+    'version': "1.0",
+    'openapi': "3.0.2",
+    'description': 'API for managing user accounts, authentication, and user information',
+    'specs': [
+        {
+            'endpoint': 'UserAPI',
+            'route': '/UserAPI.json',
+            'rule_filter': lambda rule: True,  # all in
+            'model_filter': lambda tag: True,  # all in
+        }
+    ],
+    'specs_route': "/apidocs/"
+}
+swagger = Swagger(app)
 
 # Session configuration
 app.config['SECRET_KEY'] = environ.get('SECRET_KEY', 'dealshare-login-secret-key-2025')
@@ -373,6 +410,19 @@ def verify_otp():
 # Check authentication status
 @app.route("/check-auth", methods=['GET'])
 def check_auth():
+    """
+    Check authentication status
+    ---
+    tags:
+      - Authentication
+    responses:
+      200:
+        description: User is authenticated
+        
+      401:
+        description: User is not authenticated
+        
+    """
     print(f"Session in check-auth: {session}")
     print(f"UID in session: {session.get('uid')}")
     
@@ -424,6 +474,19 @@ def logout():
 @app.route("/user/profile", methods=['GET'])
 @login_required
 def get_profile():
+    """
+    Get current user profile
+    ---
+    tags:
+      - User Management
+    responses:
+      200:
+        description: User profile retrieved successfully
+        
+      404:
+        description: User not found
+       
+    """
     uid = session['uid']
     user = db.session.scalar(db.select(User).filter_by(uid=uid))
     if user:
@@ -440,6 +503,19 @@ def get_profile():
 
 @app.route("/user", methods=['GET'])
 def get_all():
+    """
+    Get all users
+    ---
+    tags:
+      - User Management
+    responses:
+      200:
+        description: List of all users
+        
+      404:
+        description: No users found
+        
+    """
     userlist = db.session.scalars(db.select(User)).all()
     print(userlist)
     if len(userlist):
@@ -460,6 +536,26 @@ def get_all():
 
 @app.route("/user/<string:uid>", methods=['GET'])
 def get_single_user(uid):
+    """
+    Get a specific user by ID
+    ---
+    tags:
+      - User Management
+    parameters:
+      - in: path
+        name: uid
+        required: true
+        schema:
+          type: string
+        description: User ID to retrieve
+    responses:
+      200:
+        description: User retrieved successfully
+        
+      404:
+        description: User not found
+        
+    """
     user = db.session.scalar(db.select(User).filter_by(uid=uid))
     if user:
         return jsonify(
@@ -479,6 +575,26 @@ def get_single_user(uid):
 
 @app.route("/user/getAccNumFromUser/<string:uid>", methods=['GET'])
 def get_single_user_Acc(uid):
+    """
+    Get account number for a specific user
+    ---
+    tags:
+      - User Management
+    parameters:
+      - in: path
+        name: uid
+        required: true
+        schema:
+          type: string
+        description: User ID to retrieve account number for
+    responses:
+      200:
+        description: Account number retrieved successfully
+       
+      404:
+        description: User not found
+
+    """
     user = db.session.scalar(db.select(User).filter_by(uid=uid))
     if user:
         return jsonify(
@@ -498,6 +614,26 @@ def get_single_user_Acc(uid):
 
 @app.route("/user/getPhoneFromUser/<string:uid>", methods=['GET'])
 def get_single_user_phone(uid):
+    """
+    Get phone number for a specific user
+    ---
+    tags:
+      - User Management
+    parameters:
+      - in: path
+        name: uid
+        required: true
+        schema:
+          type: string
+        description: User ID to retrieve phone number for
+    responses:
+      200:
+        description: Phone number retrieved successfully
+        
+      404:
+        description: User not found
+        
+    """
     user = db.session.scalar(db.select(User).filter_by(uid=uid))
     if user:
         return jsonify(
@@ -514,9 +650,83 @@ def get_single_user_phone(uid):
             "message": "User not found."
         }
     ), 404
-
+  
+# logout  
+@app.route("/logout", methods=['POST'])
+def logout():
+    """
+    User logout
+    ---
+    tags:
+      - Authentication
+    responses:
+      200:
+        description: Successfully logged out
+        
+      500:
+        description: Error during logout
+        
+    """
+    try:
+        # Clear the session
+        session.clear()
+        
+        # Return success response
+        return jsonify({
+            "code": 200,
+            "message": "Successfully logged out"
+        }), 200
+        
+    except Exception as e:
+        # Log the error
+        print(f"Error during logout: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # Return error response
+        return jsonify({
+            "code": 500,
+            "message": f"An error occurred during logout: {str(e)}"
+        }), 500
 @app.route("/user/<string:uid>/rating", methods=['PUT'])
 def update_user_rating(uid):
+    """
+    Update user rating
+    ---
+    tags:
+      - User Management
+    parameters:
+      - in: path
+        name: uid
+        required: true
+        schema:
+          type: string
+        description: User ID to update rating for
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - rating
+            properties:
+              rating:
+                type: integer
+                description: New rating value for the user
+    responses:
+      200:
+        description: User rating updated successfully
+        
+      400:
+        description: Rating is required
+        
+      404:
+        description: User not found
+        
+      500:
+        description: Server error
+       
+    """
     user = db.session.scalar(db.select(User).filter_by(uid=uid))
     
     if not user:

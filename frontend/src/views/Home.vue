@@ -51,16 +51,17 @@
     <section v-else class="featured-deals mt-4">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0">{{ selectedCategory ? `${getCategoryName(selectedCategory)} Deals` : 'Featured Deals' }}</h5>
-        <div class="dropdown">
-          <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-            Sort By
+        <div class="dropdown custom-dropdown">
+          <button class="btn btn-outline-secondary" type="button" @click="toggleSortDropdown">
+            Sort By: {{ getSortOptionLabel() }}
+            <i class="fas fa-chevron-down ms-1"></i>
           </button>
-          <ul class="dropdown-menu" aria-labelledby="sortDropdown">
-            <li><a class="dropdown-item" href="#" @click.prevent="sortDeals('newest')">Newest</a></li>
-            <li><a class="dropdown-item" href="#" @click.prevent="sortDeals('price-low')">Price: Low to High</a></li>
-            <li><a class="dropdown-item" href="#" @click.prevent="sortDeals('price-high')">Price: High to Low</a></li>
-            <li><a class="dropdown-item" href="#" @click.prevent="sortDeals('title')">Alphabetical</a></li>
-          </ul>
+          <div class="dropdown-menu" :class="{ 'show': sortDropdownOpen }">
+            <a class="dropdown-item" href="#" @click.prevent="sortDeals('newest'); toggleSortDropdown()">Newest</a>
+            <a class="dropdown-item" href="#" @click.prevent="sortDeals('price-low'); toggleSortDropdown()">Price: Low to High</a>
+            <a class="dropdown-item" href="#" @click.prevent="sortDeals('price-high'); toggleSortDropdown()">Price: High to Low</a>
+            <a class="dropdown-item" href="#" @click.prevent="sortDeals('title'); toggleSortDropdown()">Alphabetical</a>
+          </div>
         </div>
       </div>
       
@@ -213,30 +214,22 @@
                   </div>
                   
                   <div class="mb-3">
-                    <label for="dealImage" class="form-label">Upload Image</label>
-                    <div class="input-group">
-                      <input 
-                        type="file" 
-                        class="form-control" 
-                        id="dealImage" 
-                        @change="handleImageUpload"
-                        accept="image/*"
-                      />
-                      <button 
-                        v-if="newDeal.imagePreview" 
-                        class="btn btn-outline-secondary" 
-                        type="button"
-                        @click="clearImage"
-                      >
-                        Clear
-                      </button>
-                    </div>
-                    <div class="form-text">Max file size: 5MB. Recommended size: 800x600px</div>
+                    <label for="dealImage" class="form-label">Image URL</label>
+                    <input 
+                      type="url" 
+                      class="form-control" 
+                      id="dealImage" 
+                      v-model="newDeal.image_url"
+                      @input="handleImageUpload"
+                      placeholder="Enter image URL"
+                    />
+                    <div class="form-text">Paste a direct link to an image</div>
                   </div>
-                  
+
                   <div v-if="newDeal.imagePreview" class="mb-3 image-preview-container">
                     <img :src="newDeal.imagePreview" alt="Deal preview" class="img-preview">
                   </div>
+                
                 </div>
               </div>
               
@@ -302,7 +295,8 @@ import axios from 'axios';
 import { Modal, Toast } from 'bootstrap'; // Import Bootstrap components
 
 // Define API URL
-const PRODUCT_API_URL = 'http://localhost:5005'; // Using your product.py API port
+const PRODUCT_API_URL = 'http://localhost:8000'; // Using your product.py API port
+const DEAL_API_URL = 'http://localhost:8000'; // Using your product.py API port
 
 export default {
   name: 'HomePage',
@@ -330,14 +324,15 @@ export default {
         location: "",
         price: "",
         expiresAt: "",
-        image: null,
+        image_url: "",
         imagePreview: null
       },
       validationErrors: {},
       isSubmitting: false,
       modalInstance: null,
       successToast: null,
-      errorToast: null
+      errorToast: null,
+      sortDropdownOpen: false,
     };
   },
   computed: {
@@ -384,7 +379,7 @@ export default {
       return localStorage.getItem('uid') || '';
     }
   },
-  async mounted() {
+  mounted() {
     // Initialize Bootstrap components
     if (this.$refs.dealModal) {
       this.modalInstance = new Modal(this.$refs.dealModal);
@@ -404,10 +399,37 @@ export default {
       });
     }
     
+    document.addEventListener('click', (e) => {
+    const dropdownElement = document.querySelector('.custom-dropdown');
+    if (dropdownElement && !dropdownElement.contains(e.target)) {
+      this.sortDropdownOpen = false;
+    }
+  });
+  
     // Fetch products when component mounts
-    await this.fetchProducts();
+    this.fetchProducts();
   },
   methods: {
+
+    toggleSortDropdown() {
+      this.sortDropdownOpen = !this.sortDropdownOpen;
+    },
+
+    getSortOptionLabel() {
+      switch (this.sortOption) {
+        case 'newest':
+          return 'Newest';
+        case 'price-low':
+          return 'Price: Low to High';
+        case 'price-high':
+          return 'Price: High to Low';
+        case 'title':
+          return 'Alphabetical';
+        default:
+          return 'Newest';
+      }
+    },
+
     // Fetch products from API
     async fetchProducts() {
       this.loading = true;
@@ -417,7 +439,6 @@ export default {
         
         if (response.data.code === 200) {
           this.products = response.data.data.products;
-          
           // Extract unique categories from the products
           const uniqueCategories = [...new Set(this.products.map(product => product.category))];
           
@@ -443,7 +464,12 @@ export default {
     getProductImage(product) {
       // Check if product has an image property
       // If not, return a placeholder
-      return product.image || `/api/placeholder/300/150`;
+      const placeholderUrl = '/default-placeholder.jpg';
+  
+      // Validate and return image URL
+      return product.image_url && product.image_url.trim() 
+        ? product.image_url 
+        : placeholderUrl;
     },
     
     // Format price to 2 decimal places
@@ -470,7 +496,7 @@ export default {
         location: "",
         price: "",
         expiresAt: "",
-        image: null,
+        image_url: null,
         imagePreview: null
       };
       this.validationErrors = {};
@@ -486,32 +512,35 @@ export default {
       }
     },
     handleImageUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
+      const imageUrl = event.target.value;
       
-      // Validate file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
-        alert("File is too large. Maximum size is 5MB.");
-        event.target.value = ""; // Clear the input
-        return;
+      // Validate URL
+      if (this.isValidUrl(imageUrl)) {
+        this.newDeal.image_url = imageUrl;
+        this.newDeal.imagePreview = imageUrl;
+      } else {
+        this.newDeal.image_url = "";
+        this.newDeal.imagePreview = null;
+        alert("Please enter a valid image URL");
       }
-      
-      // Save file reference
-      this.newDeal.image = file;
-      
-      // Create a preview
-      const reader = new FileReader();
-      reader.onload = e => {
-        this.newDeal.imagePreview = e.target.result;
-      };
-      reader.readAsDataURL(file);
     },
+
+    // Add URL validation method
+    isValidUrl(url) {
+      try {
+        new URL(url);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+
     clearImage() {
-      this.newDeal.image = null;
+      this.newDeal.image_url = "";
       this.newDeal.imagePreview = null;
-      // Reset the file input
-      const fileInput = document.getElementById('dealImage');
-      if (fileInput) fileInput.value = "";
+      // Reset the URL input
+      const urlInput = document.getElementById('dealImage');
+      if (urlInput) urlInput.value = "";
     },
     async submitDeal() {
       // Reset validation errors
@@ -524,6 +553,11 @@ export default {
           this.errorToast.show();
         }
         return;
+      }
+
+      if (this.newDeal.image_url && !this.isValidUrl(this.newDeal.image_url)) {
+        this.validationErrors.image_url = "Please enter a valid image URL";
+        isValid = false;
       }
       
       // Validate form data
@@ -577,7 +611,8 @@ export default {
           location: this.newDeal.location,
           price: parseFloat(this.newDeal.price),
           userid: this.currentUserId,
-          expires_at: this.newDeal.expiresAt || null
+          expires_at: this.newDeal.expiresAt || null,
+          image_url: this.newDeal.image_url || '' 
         };
         
         // POST to API
@@ -835,6 +870,53 @@ export default {
   .category-item {
     padding: 6px 12px;
     font-size: 0.9rem;
+  }
+
+  
+  .custom-dropdown {
+    position: relative;
+  }
+
+  .custom-dropdown .dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    z-index: 1000;
+    display: none;
+    min-width: 10rem;
+    padding: 0.5rem 0;
+    margin: 0.125rem 0 0;
+    font-size: 1rem;
+    color: #212529;
+    text-align: left;
+    list-style: none;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid rgba(0,0,0,.15);
+    border-radius: 0.25rem;
+  }
+
+  .custom-dropdown .dropdown-menu.show {
+    display: block;
+  }
+
+  .custom-dropdown .dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 0.25rem 1.5rem;
+    clear: both;
+    font-weight: 400;
+    color: #212529;
+    text-align: inherit;
+    white-space: nowrap;
+    background-color: transparent;
+    border: 0;
+  }
+
+  .custom-dropdown .dropdown-item:hover, .custom-dropdown .dropdown-item:focus {
+    color: #16181b;
+    text-decoration: none;
+    background-color: #f8f9fa;
   }
 }
 </style>

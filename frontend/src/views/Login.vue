@@ -159,9 +159,9 @@ import axios from 'axios';
 axios.defaults.withCredentials = true;  // Enable sending cookies
 
 // API base URL - update this to match your Flask backend
-const API_URL = 'http://localhost:5001';
+const API_URL = 'http://localhost:8000';
 // OTP API from OutSystems
-const OTP_API_URL = 'http://localhost:5001/generate-otp';
+const OTP_API_URL = 'http://localhost:8000/generate-otp';
 
 export default {
   name: 'LoginPage',
@@ -184,7 +184,8 @@ export default {
       demoAccounts: [
         { uid: '12345678', name: 'user1' },
         { uid: '22345678', name: 'user2' },
-        { uid: '32345678', name: 'user3' }
+        { uid: '32345678', name: 'user3' },
+        { uid: '42345678', name: 'user4' }
       ]
     };
   },
@@ -336,8 +337,9 @@ export default {
         console.log("Verification response:", response);
         
         if (response.data.code === 200) {
-          // OTP verified successfully
+          // Successful loginLogin successful! Redirecting...
           this.successMessage = 'Verification successful! Logging in...';
+          localStorage.setItem('uid', this.uid);
           
           // If remember me is checked, store the user ID
           if (this.rememberMe) {

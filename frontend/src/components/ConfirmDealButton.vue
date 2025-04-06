@@ -58,8 +58,8 @@
   </template>
   
   <script>
-    const DEAL_API_URL = 'http://localhost:5020'; 
-    const CONFIRM_DEAL_API_URL = 'http://localhost:5100/confirm_deal'; 
+    const DEAL_API_URL = 'http://localhost:8000'; 
+    const CONFIRM_DEAL_API_URL = 'http://localhost:8000/confirm_deal'; 
     import axios from 'axios';
     export default {
         name: 'ConfirmDealButton',
@@ -133,36 +133,55 @@
             },
         
         async confirmDeal() {
-            if (!this.termsAccepted || this.isSubmitting) return;
-            
-            this.isSubmitting = true;
-            
-            try {
-            // API call to confirm the deal based on confirm_deal.py
-            const response = await axios.post(`${CONFIRM_DEAL_API_URL}/${this.dealId}/${this.userId}`);
-            if (response.data.code === 200) {
-                this.$emit('deal-confirmed', response.data.data);
-                this.closeModal();
-                
-                // Show more detailed success message
-                const productName = response.data.data.product.title;
-                const price = this.formatPrice(response.data.data.product.price);
-                this.$emit('show-notification', {
-                    message: `Deal for ${productName} (${price}) confirmed successfully!`,
-                    type: 'success'
-                });
-                } else {
-                throw new Error(response.data.message || 'Failed to confirm deal');
-                }
-            } catch (error) {
-                console.error('Error confirming deal:', error);
-                this.$emit('show-notification', {
-                message: `Failed to confirm deal: ${error.message}`,
-                type: 'error'
-                });
-            } finally {
-                this.isSubmitting = false;
-            }
+          if (!this.termsAccepted || this.isSubmitting) return;
+          
+          this.isSubmitting = true;
+          
+          try {
+              // API call to confirm the deal based on confirm_deal.py
+              const response = await axios.post(`${CONFIRM_DEAL_API_URL}/${this.dealId}/${this.userId}`);
+              
+              if (response.data.code === 200) {
+                  this.$emit('deal-confirmed', response.data.data);
+                  this.closeModal();
+                  
+                  // Show more detailed success message
+                  const productName = response.data.data.product.title;
+                  const price = this.formatPrice(response.data.data.product.price);
+                  this.$emit('show-notification', {
+                      message: `Deal for ${productName} (${price}) confirmed successfully!`,
+                      type: 'success'
+                  });
+              } else {
+                  throw new Error(response.data.message || 'Failed to confirm deal');
+              }
+          } catch (error) {
+              console.error('Error confirming deal:', error);
+              
+              // Check for specific error messages
+              const errorMessage = error.response?.data?.message || error.message;
+              const isInsufficientFunds = errorMessage.toLowerCase().includes('insufficient funds');
+              
+              this.$emit('deal-confirmed', {
+                  error: isInsufficientFunds 
+                      ? 'Insufficient funds in your account. Please add funds to proceed.' 
+                      : errorMessage,
+                  isInsufficientFunds: isInsufficientFunds,
+                  product: {
+                      title: this.dealDetails?.productName || 'Product',
+                      price: this.price
+                  }
+              });
+              
+              this.$emit('show-notification', {
+                  message: isInsufficientFunds 
+                      ? 'Insufficient funds in your account. Please add funds to proceed.'
+                      : `Failed to confirm deal: ${errorMessage}`,
+                  type: 'error'
+              });
+          } finally {
+              this.isSubmitting = false;
+          }
         },
         
         closeModal() {

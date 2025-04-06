@@ -1,7 +1,8 @@
 <template>
   <div>
-    <button @click="showModal = true" class="report-button">
-      <span class="report-icon">⚠️</span> Report
+    <button @click="fetchDealDetails" class="report-button" :disabled="isLoading">
+      <span v-if="isLoading" class="loading-spinner"></span>
+      <span v-else class="report-icon">⚠️</span> Report
     </button>
 
     <!-- Modal -->
@@ -29,8 +30,9 @@
         
         <div class="modal-actions">
           <button @click="closeModal" class="cancel-button">Cancel</button>
-          <button @click="confirmReport" class="confirm-button" :disabled="!isReasonValid">
-            Confirm Report
+          <button @click="confirmReport" class="confirm-button" :disabled="!isReasonValid || isSubmitting">
+            <span v-if="isSubmitting" class="loading-spinner small"></span>
+            <span v-else>Confirm Report</span>
           </button>
         </div>
       </div>
@@ -39,7 +41,8 @@
 </template>
 
 <script>
-const REPORT_USER_API_URL = 'http://localhost:5300/report_user'; 
+const DEAL_API_URL = 'http://localhost:8000'; 
+const REPORT_USER_API_URL = 'http://localhost:8000/report_user'; 
 import axios from 'axios';
 export default {
   name: 'ReportButton',
@@ -59,6 +62,7 @@ export default {
   },
   data() {
     return {
+      isLoading: false,
       showModal: false,
       reason: '',
       otherReasonText: '',
@@ -74,6 +78,40 @@ export default {
     }
   },
   methods: {
+    async fetchDealDetails() {
+          this.isLoading = true;
+          try {
+            this.showModal = true;
+            this.loadingDetails = true;
+            this.error = null;
+            this.showComplaintForm = false;
+            this.termsAccepted = false;
+            this.userRating = 0;
+            this.ratingFeedback = '';
+  
+            const dealResponse = await fetch(`${DEAL_API_URL}/deal/${this.dealId}`);
+            
+            if (!dealResponse.ok) {
+              throw new Error(`HTTP Error ${dealResponse.status}`);
+            }
+  
+            const contentType = dealResponse.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+              throw new Error("Expected JSON, received HTML or another format.");
+            }
+  
+            const dealData = await dealResponse.json();
+            console.log("Deal Data:", dealData); // Debugging
+            this.dealDetails = dealData.data;
+  
+          } catch (error) {
+            console.error('Error fetching deal details:', error);
+            this.error = error.message || "An unexpected error occurred.";
+          } finally {
+            this.loadingDetails = false;
+            this.isLoading = false;
+          }
+        },
     closeModal() {
       this.showModal = false;
       this.reason = '';
@@ -93,8 +131,15 @@ export default {
             Reason: this.finalReason,
             });
         
-        if (response.data.code === 200) {
-          this.$emit('report-submitted', response.data);
+            if (response.data.code === 200) {
+          // Emit an event with report data before closing the modal
+          this.$emit('report-submitted', {
+            ...response.data,
+            dealId: this.dealId,
+            // Include this flag to indicate immediate UI update needed
+            immediateUpdate: true 
+          });
+          
           this.closeModal();
           this.$emit('show-notification', {
             message: 'Report submitted successfully',
@@ -202,4 +247,40 @@ export default {
   background-color: #cccccc;
   cursor: not-allowed;
 }
+
+.loading-container, .error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 0;
+  }
+  
+  .loading-spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+  }
+  
+  .loading-spinner.large {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 20px;
+  }
+  
+  .loading-spinner.small {
+    width: 12px;
+    height: 12px;
+    margin-right: 8px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 </style>
