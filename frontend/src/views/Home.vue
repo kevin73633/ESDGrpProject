@@ -295,8 +295,8 @@ import axios from 'axios';
 import { Modal, Toast } from 'bootstrap'; // Import Bootstrap components
 
 // Define API URL
-const PRODUCT_API_URL = 'http://localhost:5005'; // Using your product.py API port
-const DEAL_API_URL = 'http://localhost:5020'; // Using your product.py API port
+const PRODUCT_API_URL = 'http://localhost:8000'; // Using your product.py API port
+const DEAL_API_URL = 'http://localhost:8000'; // Using your product.py API port
 
 export default {
   name: 'HomePage',

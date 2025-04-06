@@ -8,6 +8,7 @@ import os
 import json
 from openai import OpenAI
 from dotenv import load_dotenv
+from flasgger import Swagger
 
 # Load environment variables from .env file
 load_dotenv()
@@ -17,6 +18,27 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = Flask(__name__)
 CORS(app)
+
+# Initialize flasgger 
+app.config['SWAGGER'] = {
+    'title': 'Chatgpt microservice API',
+    'version': "1.0",
+    "openapi": "3.0.2",
+    'description': 'OpenAI-powered chat content analyzer for detecting harmful, offensive, or inappropriate messages',
+    'specs': [
+        {
+            'endpoint': 'ChatgptAPI',
+            'route': '/ChatgptAPI.json',
+            'rule_filter': lambda rule: True,  # all in
+            'model_filter': lambda tag: True,  # all in
+        }
+    ],
+    'specs_route': "/apidocs/"
+   
+
+}
+swagger = Swagger(app)
+
 
 def analyze_with_openai(message):
     """
@@ -69,11 +91,42 @@ def analyze_with_openai(message):
 @app.route("/analyze", methods=['POST'])
 def analyze_message():
     """
-    Endpoint to analyze chat message content using OpenAI
-    Expects JSON with a 'message' field
-    Returns JSON with 'is_harmful' boolean
+    Analyze chat message content using OpenAI
+    ---
+    tags:
+      - Content Analysis
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - message
+            properties:
+              message:
+                type: string
+                description: The message text to analyze for harmful content
+    responses:
+      200:
+        description: Returns whether the message content is harmful
+    
+      400:
+        description: Bad request - missing required fields
     """
-    data = request.get_json()
+    # Print request information for debugging
+    print(f"Request Content-Type: {request.headers.get('Content-Type', 'None')}")
+    print(f"Request data: {request.get_data(as_text=True)}")
+    
+    # Handle multiple content types
+    if request.is_json:
+        data = request.get_json()
+    else:
+        # Try to parse the data manually
+        try:
+            data = json.loads(request.get_data(as_text=True))
+        except:
+            print("Failed to parse JSON")
+            data = {}
     
     if not data or 'message' not in data:
         return jsonify({

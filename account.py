@@ -9,8 +9,28 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from os import environ
 import os
+from flasgger import Swagger
 
 app = Flask(__name__)
+
+# Swagger Configuration
+app.config['SWAGGER'] = {
+    'title': 'Account and Escrow Service API',
+    'version': '1.0',
+    'openapi': '3.0.2',
+    'description': 'API for managing accounts and escrow transactions',
+    'specs': [
+        {
+            'endpoint': 'AccountAPI',
+            'route': '/AccountAPI.json',
+            'rule_filter': lambda rule: True,  # all in
+            'model_filter': lambda tag: True,  # all in
+        }
+    ],
+    'specs_route': "/apidocs/"
+    
+}
+swagger = Swagger(app)
 
 CORS(app,
      origins=["http://localhost:8080"],  # Your Vue.js frontend URL
@@ -49,6 +69,19 @@ ESCROW_ACCOUNT = '0000000000000001'
 
 @app.route("/account", methods=['GET'])
 def get_all():
+    """
+    Retrieve all accounts
+    ---
+    tags:
+      - accounts
+    responses:
+      200:
+        description: Successfully retrieved all accounts
+        
+      404:
+        description: No accounts found
+       
+    """
     acclist = db.session.scalars(db.select(Account)).all()
     print(acclist)
     if len(acclist):
@@ -69,6 +102,26 @@ def get_all():
 
 @app.route("/account/<string:accnum>", methods=['GET'])
 def get_single_accnum(accnum):
+    """
+    Retrieve a single account by account number
+    ---
+    tags:
+      - accounts
+    parameters:
+      - in: path
+        name: accnum
+        required: true
+        schema:
+          type: string
+        description: Account number to retrieve
+    responses:
+      200:
+        description: Successfully retrieved account
+        
+      404:
+        description: Account not found
+        
+    """
     account = db.session.scalar(db.select(Account).filter_by(accnum=accnum))
     
     if account:
@@ -87,15 +140,53 @@ def get_single_accnum(accnum):
 
 @app.route("/account/escrow", methods=['POST'])
 def escrow_funds():
-    """
-    Scenario 1: Buyer is escrowing money to be transferred to seller after exchange
-    - Deduct price from buyer's account and add to escrow account
+    # """
+    # Scenario 1: Buyer is escrowing money to be transferred to seller after exchange
+    # - Deduct price from buyer's account and add to escrow account
     
-    Request body:
-    {
-        "accnum": "1234123412341234",  # Buyer's account number
-        "amount": 100                   # Amount to escrow
-    }
+    # Request body:
+    # {
+    #     "accnum": "1234123412341234",  # Buyer's account number
+    #     "amount": 100                   # Amount to escrow
+    # }
+    # """
+    """
+    Escrow funds from buyer's account to escrow account
+    ---
+    tags:
+      - escrow
+    requestBody:
+      description: Buyer account details for escrowing funds
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - accnum
+              - amount
+            properties:
+              accnum:
+                type: string
+                description: Buyer's account number
+                example: "1234123412341234"
+              amount:
+                type: number
+                description: Amount to escrow
+                example: 100
+    responses:
+      200:
+        description: Funds successfully transferred to escrow
+        
+      400:
+        description: Invalid input or insufficient funds
+        
+      404:
+        description: Account not found
+        
+      500:
+        description: Server error
+        
     """
     data = request.get_json()
     
@@ -198,15 +289,53 @@ def escrow_funds():
     
 @app.route("/account/release", methods=['POST'])
 def release_funds():
-    """
-    Scenario 2: Seller receives funds from escrow after exchange verification
-    - Deduct price from escrow account and add to seller's account
+    # """
+    # Scenario 2: Seller receives funds from escrow after exchange verification
+    # - Deduct price from escrow account and add to seller's account
     
-    Request body:
-    {
-        "accnum": "5234123412341234",  # Seller's account number
-        "amount": 100                   # Amount to release
-    }
+    # Request body:
+    # {
+    #     "accnum": "5234123412341234",  # Seller's account number
+    #     "amount": 100                   # Amount to release
+    # }
+    # """
+    """
+    Release funds from escrow account to seller's account
+    ---
+    tags:
+      - escrow
+    requestBody:
+      description: Seller account details for releasing escrowed funds
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - accnum
+              - amount
+            properties:
+              accnum:
+                type: string
+                description: Seller's account number
+                example: "5234123412341234"
+              amount:
+                type: number
+                description: Amount to release
+                example: 100
+    responses:
+      200:
+        description: Funds successfully released from escrow
+        
+      400:
+        description: Invalid input or insufficient funds
+        
+      404:
+        description: Account not found
+        
+      500:
+        description: Server error
+        
     """
     data = request.get_json()
     
