@@ -287,6 +287,19 @@ def verify_deal(dealid):
         method="PUT",
         json=update_deal_payload
     )
+    
+    
+    # Step 14: Mark all other deals of the same product as closed (-2)
+    all_deals_result = invoke_http(f"{DEAL_SERVICE_URL}/deal/by_product/{deal_data['productid']}", method="GET")
+    if all_deals_result["code"] == 200:
+        for other_deal in all_deals_result["data"]:
+            if other_deal["dealid"] != dealid and other_deal["status"] != -2 and other_deal["status"] < 4:
+                close_payload = {"status": -2}
+                invoke_http(
+                    f"{DEAL_SERVICE_URL}/deal/{other_deal['dealid']}/status",
+                    method="PUT",
+                    json=close_payload
+                )
 
 
     if update_deal_result["code"] != 200:
@@ -313,8 +326,6 @@ def verify_deal(dealid):
         }
     })
     
-
-
 if __name__ == '__main__':
     print("This is flask for " + os.path.basename(__file__) + ": confirm deal composite service ...")
     app.run(host='0.0.0.0', port=5200, debug=True)

@@ -93,6 +93,7 @@
               <span class="badge bg-success">Verified</span>
             </div>
           </div>
+
           <!-- Header with user info -->
           <div class="p-3 border-bottom">
             <div class="d-flex justify-content-between align-items-center">
@@ -237,9 +238,15 @@
             
             <!-- Message input form -->
             <form @submit.prevent="sendMessage" class="w-100">
-              <div v-if="isMessagingDisabled" class="alert alert-secondary">
-                This conversation is closed as the deal has been completed.
+              <div v-if="isMessagingDisabled">
+                <span v-if="currentDeal && currentDeal.status === 4"  class="alert alert-secondary">
+                  This conversation is closed as the deal has been completed.
+                </span>
+                <span v-else-if="currentDeal && currentDeal.status === -1"  class="alert alert-danger">
+                  This conversation is closed as the chat has been reported.
+                </span>
               </div>
+
               <div v-if="!isMessagingDisabled"class="input-group">
                 <input 
                   v-model="newMessage" 
@@ -824,10 +831,18 @@ export default {
     sendQuickReply(text) {
       // Check if messaging is disabled for closed deals
       if (this.isMessagingDisabled) {
-        this.showNotification({
+        if (this.currentDeal.status === 4){
+          this.showNotification({
           message: "This conversation is closed as the deal has been completed.",
           type: "warning"
-        });
+          });
+        }
+        else if(this.currentDeal.status == -1){
+          this.showNotification({
+          message: "This conversation is closed as the chat has been reported.",
+          type: "warning"
+        })
+        }
         return;
       }
       
