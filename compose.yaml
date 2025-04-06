@@ -292,7 +292,7 @@ services:
       POSTGRES_USER: kong
       POSTGRES_PASSWORD: password
     ports:
-      - "5432:5432"
+      - "5431:5431"
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "kong"]
       interval: 10s
