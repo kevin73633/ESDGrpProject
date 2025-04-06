@@ -937,6 +937,13 @@ export default {
         message: "Your report has been submitted and is under review by our team.",
         type: "info"
       });
+
+      // Update current deal status to verified
+      if (this.currentDeal) {
+        this.currentDeal.status = -1;
+      }
+      // Refresh deal information
+      this.loadDealInformation(this.selectedDealId);
     },
     
     // Show notification
