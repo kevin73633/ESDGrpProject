@@ -85,8 +85,8 @@ Ensure the following are installed:
 
 ## 📚 Key Features
 - 🔐 Escrow payment system (Confirm Deal)
-- ✅ Post-exchange fund release and rating (Verify Receipt)
-- 🚩 Intelligent chat moderation with reporting (Report Chat)
+- ✅ Post-exchange fund release and rating (Verify Deal)
+- 🚩 Intelligent chat moderation with reporting (Report User)
 - 💬 Real-time AMQP messaging + SMS alerts
 - 🧾 RESTful microservices (Chat, Product, Deal, Rating, etc.)
 
