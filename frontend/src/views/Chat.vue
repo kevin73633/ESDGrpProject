@@ -55,7 +55,7 @@
                         <p class="fw-bold mb-0">{{ user.name }}</p>
                         <div>
                           <!-- Add a "Closed" badge if deal is closed -->
-                          <span v-if="user.dealStatus === 4" class="badge bg-secondary me-1">Closed</span>
+                          <span v-if="user.dealStatus === 4 || user.dealStatus === -1" class="badge bg-secondary me-1">Closed</span>
                           <p class="small text-muted d-inline">{{ user.lastMessageTime || '' }}</p>
                         </div>
                       </div>
@@ -352,13 +352,13 @@ export default {
     // Determine if we can show the report button
     canShowReportButton() {
     if (!this.currentDeal) return false;
-      if (this.currentDeal.status === 4) return false; // Don't show report button for closed deals
+      if (this.currentDeal.status === 4 || this.currentDeal.status === -1) return false; // Don't show report button for closed deals
       return this.selectedChatUserId && this.currentUserId && this.selectedChatUserId !== this.currentUserId;
     },
     
     // Add new computed property to check if messaging is disabled
     isMessagingDisabled() {
-      return this.currentDeal && this.currentDeal.status === 4;
+      return this.currentDeal && (this.currentDeal.status === 4 || this.currentDeal.status === -1);
     }
   },
   mounted() {
@@ -760,10 +760,18 @@ export default {
     async sendMessage() {
       // Validate message content
       if (this.isMessagingDisabled) {
-        this.showNotification({
+        if (this.currentDeal.status === 4){
+          this.showNotification({
           message: "This conversation is closed as the deal has been completed.",
           type: "warning"
-        });
+          });
+        }
+        else if(this.currentDeal.status == -1){
+          this.showNotification({
+          message: "This conversation is closed as the chat has been reported.",
+          type: "warning"
+        })
+        }
         return;
       }
 
