@@ -88,11 +88,11 @@ You can explore the RESTful API documentation using Swagger UI:
 
 ## 🧠 Contributors (G5T1)
 - **Dessy**: ChatGPT microservice, Swagger, Report & Slides
-- **Kirthi**: Notification microservice
-- **Kevin**: User, Product, Deal, Chat microservices
+- **Kirthi**: Notification microservice, AWS SNS, OTP OutSystems integration (G9T5)
+- **Kevin**: User, Product, Deal, Chat, ALL Composite microservices
 - **Kai Zhe**: Rating microservice, OutSystems integration, Report
 - **Precia**: Frontend development, API integration
-- **Shamel**: Payment, Account, PaymentRecord microservices, Kong config
+- **Shamel**: Payment, Account, PaymentRecord microservices, Kong and Docker config
 
 ---
 
