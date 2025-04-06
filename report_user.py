@@ -320,17 +320,12 @@ def report_user():
     
     # Step 7: Send notifications via AMQP
     amqp_lib.publish_message(
-        routing_key="user.reported",
+        routing_key="user.reported.notification",
         message=notification_payload,
         exchange_name=RABBITMQ_EXCHANGE,
         hostname=RABBITMQ_HOST
     )
     
-    # Step 8: Send SMS notifications
-    sms_results = {}
-    if user_phone:
-        message = f"Your report against user {reporteduserid} has been received. Deal ID: {dealid}"
-        sms_results["buyer_sms"] = send_sms(user_phone, message)
     
     # Return success response with combined data
     return jsonify({
@@ -343,8 +338,7 @@ def report_user():
             "report_status": chatgpt_data,
             "report_reason": reason,
             "notifications": {
-                "amqp_sent": True,
-                "sms_results": sms_results
+                "amqp_sent": True
             }
         }
     })

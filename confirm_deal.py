@@ -255,11 +255,6 @@ def confirm_deal(dealid, currentuserid):
         hostname=RABBITMQ_HOST
     )
     
-    # Step 8: Send SMS notifications
-    sms_results = {}
-    if user_phone:
-        buyer_message = f"Your reservation/sale of {product_data['title']} for ${product_data['price']} has been confirmed. Deal ID: {dealid}"
-        sms_results["buyer_sms"] = send_sms(user_phone, buyer_message)
     
     # Return success response with combined data
     return jsonify({
@@ -270,8 +265,7 @@ def confirm_deal(dealid, currentuserid):
             "product": product_data,
             "payment": payment_result_string,
             "notifications": {
-                "amqp_sent": True,
-                "sms_results": sms_results
+                "amqp_sent": True
             }
         }
     })

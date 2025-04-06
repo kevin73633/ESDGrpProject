@@ -260,11 +260,6 @@ def verify_deal(dealid):
         hostname=RABBITMQ_HOST
     )
     
-    # Step 11: Send SMS notifications
-    sms_results = {}
-    if user_phone:
-        buyer_message = f"Your purchase/sale of {product_data['title']} for ${product_data['price']} has been verified. Deal ID: {dealid}"
-        sms_results["buyer_sms"] = send_sms(user_phone, buyer_message)
 
 
     # Calculate average rating
@@ -304,7 +299,6 @@ def verify_deal(dealid):
 
     if update_deal_result["code"] != 200:
         # Payment was successful but deal status update failed
-        # We should implement compensating transaction here (refund)
         return jsonify({
             "code": 500,
             "message": f"Deal status update failed: {update_deal_result['message']}"
@@ -320,8 +314,7 @@ def verify_deal(dealid):
             "finalUserRating" : user_data['rating'],
             "payment": payment_result_string,
             "notifications": {
-                "amqp_sent": True,
-                "sms_results": sms_results
+                "amqp_sent": True
             }
         }
     })

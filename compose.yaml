@@ -241,7 +241,9 @@ services:
       AWS_REGION: ${AWS_REGION}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_EXCHANGE: deal_events
-      RABBITMQ_QUEUE: notification_queue
+      RABBITMQ_QUEUE1: deal_confirmation_queue
+      RABBITMQ_QUEUE2: deal_verification_queue
+      RABBITMQ_QUEUE3: user_report_queue
     networks:
       - esd-net
 
