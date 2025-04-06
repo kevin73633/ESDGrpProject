@@ -30,8 +30,9 @@
         
         <div class="modal-actions">
           <button @click="closeModal" class="cancel-button">Cancel</button>
-          <button @click="confirmReport" class="confirm-button" :disabled="!isReasonValid">
-            Confirm Report
+          <button @click="confirmReport" class="confirm-button" :disabled="!isReasonValid || isSubmitting">
+            <span v-if="isSubmitting" class="loading-spinner small"></span>
+            <span v-else>Confirm Report</span>
           </button>
         </div>
       </div>
@@ -246,4 +247,40 @@ export default {
   background-color: #cccccc;
   cursor: not-allowed;
 }
+
+.loading-container, .error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 0;
+  }
+  
+  .loading-spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+  }
+  
+  .loading-spinner.large {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 20px;
+  }
+  
+  .loading-spinner.small {
+    width: 12px;
+    height: 12px;
+    margin-right: 8px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 </style>
