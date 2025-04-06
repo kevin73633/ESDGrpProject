@@ -66,6 +66,8 @@ Ensure the following are installed:
 - **User 4 (Buyer):**
   - Username: `42345678`
 
+
+7. [Demo Youtube Link](https://youtu.be/BOxkQd_93y8) <- test the three user scenarios used in this video demo
 ---
 
 ## 🧠 Technologies Used
@@ -93,10 +95,25 @@ Ensure the following are installed:
 ---
 
 ## 📄 API Documentation
-You can explore the RESTful API documentation using Swagger UI:
+You can explore the RESTful API documentation using Swagger UI, make sure up to Step 4 is completed!!!! :
 
-🔗 [View Swagger API Docs](http://localhost:5300/apidocs)
+🔗 [View Swagger API Docs](http://localhost:temp/apidocs)
 
+^^ REPLACE temp with a port number below to view swagger api doc for that api ^^
+Account API - 5030
+Chat API - 5087
+ChatGPT API (Wrapper) - 5002
+Deal API - 5020
+Notification API - 5075
+Paymentrecord API - 5032
+Product API - 5005
+Rating API (Built on OutSystems) - Use this link instead - https://personal-nzmfqiqp.outsystemscloud.com/RatingAPI_REST/rest/v1/
+Report Log API - 5004
+User API - 5001
+Confirm Deal API - 5100
+Verify Deal API - 5200
+Report User API - 5300
+Payment API - 5031
 
 ---
 
