@@ -108,7 +108,7 @@ You can explore the RESTful API documentation using Swagger UI, make sure up to 
 [Notification API](http://localhost:5075/apidocs)
 [Paymentrecord API](http://localhost:5032/apidocs)
 [Product API](http://localhost:5005/apidocs)
-[Rating API (Built on OutSystems)](https://personal-nzmfqiqp.outsystemscloud.com/[RatingAPI_REST/rest/v1/)
+[Rating API (Built on OutSystems)](https://personal-nzmfqiqp.outsystemscloud.com/RatingAPI_REST/rest/v1/)
 [Report Log API](http://localhost:5004/apidocs)
 [User API](http://localhost:5001/apidocs)
 [Confirm Deal API](http://localhost:5100/apidocs)
