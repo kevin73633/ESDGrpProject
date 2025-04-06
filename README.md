@@ -70,6 +70,14 @@ Ensure the following are installed:
 
 ---
 
+## 📖 API Documentation
+
+You can explore the RESTful API documentation using Swagger UI:
+
+🔗 [View Swagger API Docs](http://localhost:5300/apidocs)
+
+---
+
 ## 🧠 Contributors (G5T1)
 - Dessy (ChatGPT microservice, Swagger, Docs)
 - Kirthi (Notification service)
