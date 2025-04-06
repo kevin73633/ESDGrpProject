@@ -115,7 +115,8 @@ export default {
       demoAccounts: [
         { uid: '12345678', name: 'user1' },
         { uid: '22345678', name: 'user2' },
-        { uid: '32345678', name: 'user3' }
+        { uid: '32345678', name: 'user3' },
+        { uid: '42345678', name: 'user4' }
       ]
     };
   },

@@ -75,7 +75,8 @@ CREATE TABLE IF NOT EXISTS `deal` (
 --
 
 INSERT INTO `deal` (`dealid`, `buyerid`, `sellerid`, `productid`, `status`) VALUES
-('11111111', '22345678', '12345678', 1, 0);
+('11111111', '22345678', '12345678', 1, 0),
+('22222222', '42345678', '32345678', 2, 0);
 COMMIT;
 --
 -- Table structure for table `account`
@@ -141,15 +142,15 @@ CREATE TABLE IF NOT EXISTS `chat` (
   `sentat` DATETIME DEFAULT now(),
   PRIMARY KEY (`messageid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-DELIMITER //
-CREATE TRIGGER before_insert_chat
-BEFORE INSERT ON chat
-FOR EACH ROW
-BEGIN
-    SET NEW.messageid = LPAD(FLOOR(RAND() * 100000000), 8, '0'); -- Generates an 8-digit random number
-END;
-//
-DELIMITER ;
+-- DELIMITER //
+-- CREATE TRIGGER before_insert_chat
+-- BEFORE INSERT ON chat
+-- FOR EACH ROW
+-- BEGIN
+--     SET NEW.messageid = LPAD(FLOOR(RAND() * 100000000), 8, '0'); -- Generates an 8-digit random number
+-- END;
+-- //
+-- DELIMITER ;
 
 
 
@@ -158,12 +159,14 @@ DELIMITER ;
 -- Dumping data for table `chat`
 --
 
-INSERT INTO `chat` (`senderid`, `receiverid`, `dealid`, `message`) VALUES
-(12345678, 22345678, 11111111,'bruh'),
-(12345678, 22345678, 11111111,'bruhh'),
-(12345678, 22345678, 11111111,'bruhhh'),
-(12345678, 22345678, 11111111,'bruhhhh'),
-(12345678, 22345678, 11111111,'bruhhhhhh');
+INSERT INTO `chat` (`messageid`, `senderid`, `receiverid`, `dealid`, `message`) VALUES
+(1, 22345678, 12345678, 11111111,"yo!"),
+(2, 12345678, 22345678, 11111111,"Hi!"),
+(3, 22345678, 12345678, 11111111,"I'm interested in this deal!"),
+(4, 12345678, 22345678, 11111111,"Ok!"),
+(5, 42345678, 32345678, 22222222,"Hello!"),
+(6, 32345678, 42345678, 22222222,"Hi!"),
+(7, 42345678, 32345678, 22222222,"Actually, never mind. This deal sucks and i hate you!");
 COMMIT;
 --
 -- Table structure for table `ReportLog`
