@@ -39,7 +39,7 @@
 </template>
 
 <script>
-const REPORT_USER_API_URL = 'http://localhost:5300/report_user'; 
+const REPORT_USER_API_URL = 'http://localhost:8000/report_user'; 
 import axios from 'axios';
 export default {
   name: 'ReportButton',
@@ -87,11 +87,11 @@ export default {
       try {
         // API call to submit the report
         const response = await axios.post(`${REPORT_USER_API_URL}`, {
-          UserID: this.currentUserId,
+            UserID: this.currentUserId,
             ReportedUserID: this.reportedUserId,
             dealId: this.dealId,
             Reason: this.finalReason,
-            });
+        });
         
         if (response.data.code === 200) {
           this.$emit('report-submitted', response.data);

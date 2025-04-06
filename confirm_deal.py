@@ -62,56 +62,56 @@ def send_sms(phone_number, message):
     """
     Send SMS to any phone number using Amazon SNS
     
-    Args:
-        phone_number: Phone number in E.164 format (+6512345678)
-        message: The text message to send
+#     Args:
+#         phone_number: Phone number in E.164 format (+6512345678)
+#         message: The text message to send
     
-    Returns:
-        Dictionary with success status and message ID or error
-    """
-    try:
-        # Initialize SNS client
-        sns_client = boto3.client('sns',
-            region_name=AWS_REGION,
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY
-        )
+#     Returns:
+#         Dictionary with success status and message ID or error
+#     """
+#     try:
+#         # Initialize SNS client
+#         sns_client = boto3.client('sns',
+#             region_name=AWS_REGION,
+#             aws_access_key_id=AWS_ACCESS_KEY_ID,
+#             aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+#         )
         
-        # Format phone number if needed
-        if not phone_number.startswith('+'):
-            # Assuming Singapore number
-            if phone_number.startswith('0'):
-                phone_number = '+65' + phone_number[1:]
-            else:
-                phone_number = '+65' + phone_number
+#         # Format phone number if needed
+#         if not phone_number.startswith('+'):
+#             # Assuming Singapore number
+#             if phone_number.startswith('0'):
+#                 phone_number = '+65' + phone_number[1:]
+#             else:
+#                 phone_number = '+65' + phone_number
         
-        # Send the SMS
-        response = sns_client.publish(
-            PhoneNumber=phone_number,
-            Message=message,
-            MessageAttributes={
-                'AWS.SNS.SMS.SenderID': {
-                    'DataType': 'String',
-                    'StringValue': 'DEALSVC'  # Custom sender ID
-                },
-                'AWS.SNS.SMS.SMSType': {
-                    'DataType': 'String',
-                    'StringValue': 'Transactional'  # Higher priority
-                }
-            }
-        )
+#         # Send the SMS
+#         response = sns_client.publish(
+#             PhoneNumber=phone_number,
+#             Message=message,
+#             MessageAttributes={
+#                 'AWS.SNS.SMS.SenderID': {
+#                     'DataType': 'String',
+#                     'StringValue': 'DEALSVC'  # Custom sender ID
+#                 },
+#                 'AWS.SNS.SMS.SMSType': {
+#                     'DataType': 'String',
+#                     'StringValue': 'Transactional'  # Higher priority
+#                 }
+#             }
+#         )
         
-        return {
-            "success": True,
-            "message_id": response.get('MessageId')
-        }
+#         return {
+#             "success": True,
+#             "message_id": response.get('MessageId')
+#         }
         
-    except Exception as e:
-        print(f"Error sending SMS: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
+#     except Exception as e:
+#         print(f"Error sending SMS: {str(e)}")
+#         return {
+#             "success": False,
+#             "error": str(e)
+#         }
 
 @app.route("/confirm_deal/<string:dealid>/<string:currentuserid>", methods=['POST'])
 def confirm_deal(dealid, currentuserid):
