@@ -9,6 +9,8 @@ import uuid
 from datetime import datetime
 import amqp_lib
 from dotenv import load_dotenv
+from flasgger import Swagger
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -17,6 +19,24 @@ CORS(app,
      supports_credentials=True,
      methods=["GET", "POST", "OPTIONS"],
      allow_headers=["Content-Type", "Authorization"])
+
+# Add Swagger configuration
+app.config['SWAGGER'] = {
+    'title': 'Deal Verification API',
+    'version': "1.0",
+    'openapi': "3.0.2",
+    'description': 'API for verifying deals, processing payments, and updating ratings',
+    'specs': [
+        {
+            'endpoint': 'VerifyDealAPI',
+            'route': '/VerifyDealAPI.json',
+            'rule_filter': lambda rule: True,  # all in
+            'model_filter': lambda tag: True,  # all in
+        }
+    ],
+    'specs_route': "/apidocs/"
+}
+swagger = Swagger(app)
 
 # Define microservice URLs
 DEAL_SERVICE_URL = "http://deal:5020"
@@ -96,6 +116,43 @@ def send_sms(phone_number, message):
 
 @app.route("/verify_deal/<string:dealid>", methods=['POST'])
 def verify_deal(dealid):
+    """
+    Verify a deal by processing payment, updating ratings, and changing deal status
+    ---
+    tags:
+      - Deal Verification
+    parameters:
+      - in: path
+        name: dealid
+        required: true
+        schema:
+          type: string
+        description: ID of the deal to verify
+    requestBody:
+      description: Rating information
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - rating
+            properties:
+              rating:
+                type: integer
+                description: Rating score given by the buyer to the seller
+                minimum: 1
+                maximum: 5
+            example:
+              rating: 5
+    responses:
+      200:
+        description: Deal verified successfully
+      404:
+        description: Deal, product, or user not found
+      500:
+        description: Server error, payment failure, or deal status update failed
+    """
     rating = request.json['rating']
     # Step 1: Get deal information
     deal_result = invoke_http(f"{DEAL_SERVICE_URL}/deal/{dealid}", method="GET")
