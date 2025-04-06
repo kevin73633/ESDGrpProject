@@ -50,10 +50,8 @@ Ensure the following are installed:
 ### 🧪 Test Credentials
 - **User 1 (Buyer):**
   - Username: `12345678`
-  - Password: `user1`
 - **User 2 (Seller):**
   - Username: `22345678`
-  - Password: `user2`
 
 ---
 
