@@ -16,13 +16,14 @@ Ensure the following are installed:
 - Python 3.9+ (if editing backend)
 
 ### 📥 Clone and Setup
-1. Clone the repository:
+1. Clone the repository (USE BRANCH NAMED "FINAL"):
    ```bash
    gh repo clone kevin73633/ESDGrpProject
    cd ESDGrpProject
    ```
 
 2. Ensure `.env` file is configured with your AWS credentials, OpenAI key, and database login:
+   .env file is in the zip provided!
    > 💡 **Mac users**: use `DBLOGIN=root:root`  
    > 💡 **Windows users**: use `DBLOGIN=root`
 
