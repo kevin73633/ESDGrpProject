@@ -155,10 +155,10 @@ def report_user():
                 type: string
                 description: ID of the user being reported
             example:
-              dealId: "12345"
-              Reason: "Inappropriate behavior in chat"
-              UserID: "user123"
-              ReportedUserID: "user456"
+              dealId: "11111111"
+              Reason: "Scam Behavior"
+              UserID: "12345678"
+              ReportedUserID: "22345678"
     responses:
       200:
         description: User report processed successfully
