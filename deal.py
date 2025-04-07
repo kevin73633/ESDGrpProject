@@ -162,7 +162,7 @@ def get_deal_with_product(productid):
         description: No deal found for the product
         
     """
-    deals = db.session.scalar(db.select(Deal).filter_by(productid=productid)).all()
+    deals = db.session.scalars(db.select(Deal).filter_by(productid=productid)).all()
     if deals:
         return jsonify(
             {

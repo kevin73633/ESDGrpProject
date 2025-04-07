@@ -226,9 +226,9 @@ def verify_deal(dealid):
     
     
     # Step 14: Mark all other deals of the same product as closed (-2)
-    all_deals_result = invoke_http(f"{DEAL_SERVICE_URL}/deal/get_deal_with_product/{deal_data['productid']}", method="GET")
+    all_deals_result = invoke_http(f"{DEAL_SERVICE_URL}/get_deal_with_product/{deal_data['productid']}", method="GET")
     if all_deals_result["code"] == 200:
-        for other_deal in all_deals_result["data"]:
+        for other_deal in all_deals_result["data"]["deals"]:
             if other_deal["dealid"] != dealid and other_deal["status"] != -2 and other_deal["status"] < 4:
                 close_payload = {"status": -2}
                 invoke_http(
