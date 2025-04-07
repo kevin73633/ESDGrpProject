@@ -76,7 +76,8 @@ CREATE TABLE IF NOT EXISTS `deal` (
 
 INSERT INTO `deal` (`dealid`, `buyerid`, `sellerid`, `productid`, `status`) VALUES
 ('11111111', '22345678', '12345678', 1, 0),
-('22222222', '42345678', '32345678', 2, 0);
+('22222222', '42345678', '12345678', 2, 0),
+('33333333', '32345678', '12345678', 1, 0);
 COMMIT;
 --
 -- Table structure for table `account`
@@ -164,9 +165,10 @@ INSERT INTO `chat` (`messageid`, `senderid`, `receiverid`, `dealid`, `message`) 
 (2, 12345678, 22345678, 11111111,"Hi!"),
 (3, 22345678, 12345678, 11111111,"I'm interested in this deal!"),
 (4, 12345678, 22345678, 11111111,"Ok!"),
-(5, 42345678, 32345678, 22222222,"Hello!"),
-(6, 32345678, 42345678, 22222222,"Hi!"),
-(7, 42345678, 32345678, 22222222,"Actually, never mind. This deal sucks and i hate you!");
+(5, 42345678, 12345678, 22222222,"Hello!"),
+(6, 12345678, 42345678, 22222222,"Hi!"),
+(7, 42345678, 12345678, 22222222,"Actually, never mind. This deal sucks and i hate you!");
+(8, 32345678, 12345678, 33333333,"Hi!, i'd like to purchase this!");
 COMMIT;
 --
 -- Table structure for table `ReportLog`
