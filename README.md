@@ -22,10 +22,12 @@ Ensure the following are installed:
    cd ESDGrpProject
    ```
 
-2. Ensure [.env](https://drive.google.com/uc?export=download&id=1Dq59wXWKg9_fOVN25NezraEcrAAP2iM6) file is configured with your AWS credentials, OpenAI key, and database login.  
-   💡 **IMPORTANT**: `.env` file is inside the ZIP provided above!  
+2. Ensure [.env ZIP file](https://drive.google.com/uc?export=download&id=12C7zfxj35Ur3vrYaL2-EwXqTwY6sYxcN) is downloaded and extracted.  
+   📌 **IMPORTANT:** The `.env` file is inside the ZIP archive — make sure it stays named `.env` after extraction!  
+   🔐 **Note:** You must be logged into an SMU Google account to access the file.  
    > 💡 **Mac users**: use `DBLOGIN=root:root`  
    > 💡 **Windows users**: use `DBLOGIN=root`
+
 
 
    ```env
