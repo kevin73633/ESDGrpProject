@@ -22,10 +22,11 @@ Ensure the following are installed:
    cd ESDGrpProject
    ```
 
-2. Ensure [.env](https://drive.google.com/file/d/1Dq59wXWKg9_fOVN25NezraEcrAAP2iM6/view?usp=sharing) file is configured with your AWS credentials, OpenAI key, and database login:
-   !!!IMPORTANT!!!    .env file is in the zip provided!
+2. Ensure [.env](https://drive.google.com/uc?export=download&id=1Dq59wXWKg9_fOVN25NezraEcrAAP2iM6) file is configured with your AWS credentials, OpenAI key, and database login.  
+   💡 **IMPORTANT**: `.env` file is inside the ZIP provided above!  
    > 💡 **Mac users**: use `DBLOGIN=root:root`  
    > 💡 **Windows users**: use `DBLOGIN=root`
+
 
    ```env
    AWS_ACCESS_KEY_ID=AKIA...
